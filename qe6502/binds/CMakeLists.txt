@@ -1,0 +1,5 @@
+if(QE6502_BUILD_WASM)
+    add_subdirectory(js)
+elseif(QE6502_BUILD_CPP)
+    add_subdirectory(cpp)
+endif()
