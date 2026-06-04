@@ -45,31 +45,17 @@ enum
  */
 enum
 {
-    /* Number of low index bits used to select one microcode entry inside a slot. */
-    qe6502_microcode_index_bits = 3,
-
-    /* Number of index bits used to select an opcode or private service slot inside one model block. */
-    qe6502_slot_index_bits = 9,
-
     /* Number of microcode entries stored in each opcode/service slot. */
-    qe6502_microcode_per_slot = 1u << qe6502_microcode_index_bits,
-
-    /* Number of opcode/service slots stored in one model block. */
-    qe6502_slots_per_model = 1u << qe6502_slot_index_bits,
-
-    /* Number of microcode entries stored in one complete model block. */
-    qe6502_microcode_per_model = qe6502_slots_per_model * qe6502_microcode_per_slot,
+    qe6502_microcode_per_slot = 8,
 
     /* Total number of microcode entries stored in the complete control store. */
-    qe6502_control_store_size = qe6502_microcode_per_model * qe6502_supported_models_count
+    qe6502_control_store_size = 2 * 256 * qe6502_microcode_per_slot * qe6502_supported_models_count
 };
 QE6502_STATIC_ASSERT((qe6502_microcode_per_slot & (qe6502_microcode_per_slot - 1u)) == 0u,
                      "qe6502_microcode_per_slot must be a power of two");
-QE6502_STATIC_ASSERT((qe6502_slots_per_model & (qe6502_slots_per_model - 1u)) == 0u,
-                     "qe6502_slots_per_model must be a power of two");
-QE6502_STATIC_ASSERT(qe6502_control_store_size ==
-                     ((int)qe6502_microcode_per_model * (int)qe6502_supported_models_count),
-                     "qe6502 control-store size mismatch");
+
+#define QE6502_IDX(model, slot, cycle) (uint16_t)((((uint32_t)(model) & 0x0Fu) << 12u) | ((((uint32_t)(slot)) & 0x1FFu) << 3u) | (uint32_t)(cycle))
+#define QE6502_SERVICE_SLOT_IDX(model, service, cycle) QE6502_IDX(model, service, cycle)
 
 /* CPU state. */
 typedef struct qe6502_cpu
@@ -94,7 +80,7 @@ typedef struct qe6502_cpu
     uint8_t  Y;
     uint8_t  P;
 
-    /* Interrupts / control. */
+    /* Interrupts control. */
     uint8_t  interrupts;
 } qe6502_t;
 QE6502_STATIC_ASSERT(sizeof(qe6502_t) == 16, "qe6502_t must be 16 bytes");
@@ -140,14 +126,18 @@ enum
 
     /* Interrupt state flags. */
 
-    /* NMI accept latched. */
-    qe6502_interrupt_accepted_nmi  = (1u << 0),
+    /* Interrupt sampling cycle. */
+    qe6502_interrupt_sampling  = (1u << 0),
 
-    /* IRQ accept latched. */
-    qe6502_interrupt_accepted_irq  = (1u << 1),
+    qe6502_interrupt_nmi_inv_pin  = (1u << 1),
 
-    /* NMI|IRQ accept latched. */
-    qe6502_interrupt_accepted_mask = (uint8_t)(qe6502_interrupt_accepted_nmi | qe6502_interrupt_accepted_irq)
+    qe6502_interrupt_nmi_edge = (1u << 2),
+
+    qe6502_interrupt_nmi_taken = (1u << 3),
+
+    qe6502_interrupt_irq_inv_pin  = (1u << 4),
+
+    qe6502_interrupt_irq_taken  = (1u << 5),
 };
 
 /* Microcode entry. */
@@ -167,14 +157,11 @@ qe6502_tick_t qe6502_reset(qe6502_t *cpu);
 /* Enter execution at address and return the first bus request. */
 qe6502_tick_t qe6502_goto(qe6502_t *cpu, uint16_t address);
 
-/* Set the IRQ input pin. */
-void qe6502_set_irq(qe6502_t *cpu, uint8_t pin);
+void qe6502_nmi_assert(qe6502_t *cpu, uint8_t assert_nmi);
+void qe6502_irq_assert(qe6502_t *cpu, uint8_t assert_irq);
 
-/* Get the IRQ input pin. */
-uint8_t qe6502_get_irq(const qe6502_t *cpu);
-
-/* Trigger NMI. */
-void qe6502_nmi(qe6502_t *cpu);
+uint8_t qe6502_is_nmi_asserted(const qe6502_t *cpu);
+uint8_t qe6502_is_irq_asserted(const qe6502_t *cpu);
 
 void qe6502_save(const qe6502_t *cpu,
                  qe6502_tick_t tick,
@@ -188,7 +175,7 @@ qe6502_tick_t qe6502_tick(qe6502_t *cpu, uint8_t bus)
 {
     if( cpu->hijack_microcode != 0 )
     {
-        return qe6502_control_store[cpu->hijack_microcode](cpu, bus);
+        return qe6502_control_store[QE6502_SERVICE_SLOT_IDX(cpu->model, 0x100, cpu->hijack_microcode)](cpu, bus);
     }
 
     qe6502_tick_t tick = qe6502_control_store[cpu->microcode](cpu, bus);

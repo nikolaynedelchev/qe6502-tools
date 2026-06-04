@@ -13,8 +13,11 @@
 #define QE6502_SURFACE_MAX_REASONABLE_SYMBOLS 65536u
 
 static const char *const qe6502abi_expected[] = {
+    "qe6502abi_irq_assert",
+    "qe6502abi_is_irq_asserted",
+    "qe6502abi_nmi_assert",
+    "qe6502abi_is_nmi_asserted",
     "qe6502abi_get_a",
-    "qe6502abi_get_irq",
     "qe6502abi_get_model",
     "qe6502abi_get_p",
     "qe6502abi_get_pc",
@@ -23,12 +26,10 @@ static const char *const qe6502abi_expected[] = {
     "qe6502abi_get_y",
     "qe6502abi_goto",
     "qe6502abi_load",
-    "qe6502abi_nmi",
     "qe6502abi_reset",
     "qe6502abi_restart",
     "qe6502abi_save",
     "qe6502abi_set_a",
-    "qe6502abi_set_irq",
     "qe6502abi_set_model",
     "qe6502abi_set_p",
     "qe6502abi_set_pc",

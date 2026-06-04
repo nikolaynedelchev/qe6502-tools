@@ -2,6 +2,8 @@
 
         /* WDC service slots. */
 
+        [SERVICE_SLOT_IDX(qe6502_model_wdc, service_slot_microcode_hijacked, 1)] = &interrupt_manager,
+
         [SERVICE_SLOT_IDX(qe6502_model_wdc, service_slot_illegal_ext, 0)] = &mc_dispatch,
 
         [SERVICE_SLOT_IDX(qe6502_model_wdc, service_slot_reset_0, 0)] = &mc_restart_read_00ff,
@@ -147,13 +149,13 @@
         [IDX(qe6502_model_wdc, 0x0F, 2)] = &mc_read_latch_addr,
         [IDX(qe6502_model_wdc, 0x0F, 3)] = &mc_wdc_bbr_bbs_c3_offset_or_skip_prefetch,
         [IDX(qe6502_model_wdc, 0x0F, 4)] = &mc_wdc_bbr_bbs_c4_apply,
-        [IDX(qe6502_model_wdc, 0x0F, 5)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0x0F, 5)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0x0F, 6)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0x0F, 7)] = &mc_dispatch,
         /* 0x10 BPL rel ; class=branch_rel */
         [IDX(qe6502_model_wdc, 0x10, 0)] = &op_bpl_branch_c0_offset_prefetch,
         [IDX(qe6502_model_wdc, 0x10, 1)] = &mc_branch_rel_c1_apply,
-        [IDX(qe6502_model_wdc, 0x10, 2)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0x10, 2)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0x10, 3)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0x10, 4)] = &mc_dispatch,
 
@@ -265,7 +267,7 @@
         [IDX(qe6502_model_wdc, 0x1F, 2)] = &mc_read_latch_addr,
         [IDX(qe6502_model_wdc, 0x1F, 3)] = &mc_wdc_bbr_bbs_c3_offset_or_skip_prefetch,
         [IDX(qe6502_model_wdc, 0x1F, 4)] = &mc_wdc_bbr_bbs_c4_apply,
-        [IDX(qe6502_model_wdc, 0x1F, 5)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0x1F, 5)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0x1F, 6)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0x1F, 7)] = &mc_dispatch,
         /* 0x20 JSR abs ; class=jsr_abs */
@@ -373,13 +375,13 @@
         [IDX(qe6502_model_wdc, 0x2F, 2)] = &mc_read_latch_addr,
         [IDX(qe6502_model_wdc, 0x2F, 3)] = &mc_wdc_bbr_bbs_c3_offset_or_skip_prefetch,
         [IDX(qe6502_model_wdc, 0x2F, 4)] = &mc_wdc_bbr_bbs_c4_apply,
-        [IDX(qe6502_model_wdc, 0x2F, 5)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0x2F, 5)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0x2F, 6)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0x2F, 7)] = &mc_dispatch,
         /* 0x30 BMI rel ; class=branch_rel */
         [IDX(qe6502_model_wdc, 0x30, 0)] = &op_bmi_branch_c0_offset_prefetch,
         [IDX(qe6502_model_wdc, 0x30, 1)] = &mc_branch_rel_c1_apply,
-        [IDX(qe6502_model_wdc, 0x30, 2)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0x30, 2)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0x30, 3)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0x30, 4)] = &mc_dispatch,
 
@@ -489,7 +491,7 @@
         [IDX(qe6502_model_wdc, 0x3F, 2)] = &mc_read_latch_addr,
         [IDX(qe6502_model_wdc, 0x3F, 3)] = &mc_wdc_bbr_bbs_c3_offset_or_skip_prefetch,
         [IDX(qe6502_model_wdc, 0x3F, 4)] = &mc_wdc_bbr_bbs_c4_apply,
-        [IDX(qe6502_model_wdc, 0x3F, 5)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0x3F, 5)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0x3F, 6)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0x3F, 7)] = &mc_dispatch,
         /* 0x40 RTI ; class=rti */
@@ -595,13 +597,13 @@
         [IDX(qe6502_model_wdc, 0x4F, 2)] = &mc_read_latch_addr,
         [IDX(qe6502_model_wdc, 0x4F, 3)] = &mc_wdc_bbr_bbs_c3_offset_or_skip_prefetch,
         [IDX(qe6502_model_wdc, 0x4F, 4)] = &mc_wdc_bbr_bbs_c4_apply,
-        [IDX(qe6502_model_wdc, 0x4F, 5)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0x4F, 5)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0x4F, 6)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0x4F, 7)] = &mc_dispatch,
         /* 0x50 BVC rel ; class=branch_rel */
         [IDX(qe6502_model_wdc, 0x50, 0)] = &op_bvc_branch_c0_offset_prefetch,
         [IDX(qe6502_model_wdc, 0x50, 1)] = &mc_branch_rel_c1_apply,
-        [IDX(qe6502_model_wdc, 0x50, 2)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0x50, 2)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0x50, 3)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0x50, 4)] = &mc_dispatch,
 
@@ -711,7 +713,7 @@
         [IDX(qe6502_model_wdc, 0x5F, 2)] = &mc_read_latch_addr,
         [IDX(qe6502_model_wdc, 0x5F, 3)] = &mc_wdc_bbr_bbs_c3_offset_or_skip_prefetch,
         [IDX(qe6502_model_wdc, 0x5F, 4)] = &mc_wdc_bbr_bbs_c4_apply,
-        [IDX(qe6502_model_wdc, 0x5F, 5)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0x5F, 5)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0x5F, 6)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0x5F, 7)] = &mc_dispatch,
         /* 0x60 RTS ; class=rts */
@@ -825,13 +827,13 @@
         [IDX(qe6502_model_wdc, 0x6F, 2)] = &mc_read_latch_addr,
         [IDX(qe6502_model_wdc, 0x6F, 3)] = &mc_wdc_bbr_bbs_c3_offset_or_skip_prefetch,
         [IDX(qe6502_model_wdc, 0x6F, 4)] = &mc_wdc_bbr_bbs_c4_apply,
-        [IDX(qe6502_model_wdc, 0x6F, 5)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0x6F, 5)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0x6F, 6)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0x6F, 7)] = &mc_dispatch,
         /* 0x70 BVS rel ; class=branch_rel */
         [IDX(qe6502_model_wdc, 0x70, 0)] = &op_bvs_branch_c0_offset_prefetch,
         [IDX(qe6502_model_wdc, 0x70, 1)] = &mc_branch_rel_c1_apply,
-        [IDX(qe6502_model_wdc, 0x70, 2)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0x70, 2)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0x70, 3)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0x70, 4)] = &mc_dispatch,
 
@@ -949,13 +951,13 @@
         [IDX(qe6502_model_wdc, 0x7F, 2)] = &mc_read_latch_addr,
         [IDX(qe6502_model_wdc, 0x7F, 3)] = &mc_wdc_bbr_bbs_c3_offset_or_skip_prefetch,
         [IDX(qe6502_model_wdc, 0x7F, 4)] = &mc_wdc_bbr_bbs_c4_apply,
-        [IDX(qe6502_model_wdc, 0x7F, 5)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0x7F, 5)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0x7F, 6)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0x7F, 7)] = &mc_dispatch,
         /* 0x80 BRA rel ; class=branch_rel */
         [IDX(qe6502_model_wdc, 0x80, 0)] = &op_cmos_bra_branch_c0_offset_prefetch,
         [IDX(qe6502_model_wdc, 0x80, 1)] = &mc_branch_rel_c1_apply,
-        [IDX(qe6502_model_wdc, 0x80, 2)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0x80, 2)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0x80, 3)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0x80, 4)] = &mc_dispatch,
 
@@ -1049,13 +1051,13 @@
         [IDX(qe6502_model_wdc, 0x8F, 2)] = &mc_read_latch_addr,
         [IDX(qe6502_model_wdc, 0x8F, 3)] = &mc_wdc_bbr_bbs_c3_offset_or_skip_prefetch,
         [IDX(qe6502_model_wdc, 0x8F, 4)] = &mc_wdc_bbr_bbs_c4_apply,
-        [IDX(qe6502_model_wdc, 0x8F, 5)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0x8F, 5)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0x8F, 6)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0x8F, 7)] = &mc_dispatch,
         /* 0x90 BCC rel ; class=branch_rel */
         [IDX(qe6502_model_wdc, 0x90, 0)] = &op_bcc_branch_c0_offset_prefetch,
         [IDX(qe6502_model_wdc, 0x90, 1)] = &mc_branch_rel_c1_apply,
-        [IDX(qe6502_model_wdc, 0x90, 2)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0x90, 2)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0x90, 3)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0x90, 4)] = &mc_dispatch,
 
@@ -1160,7 +1162,7 @@
         [IDX(qe6502_model_wdc, 0x9F, 2)] = &mc_read_latch_addr,
         [IDX(qe6502_model_wdc, 0x9F, 3)] = &mc_wdc_bbr_bbs_c3_offset_or_skip_prefetch,
         [IDX(qe6502_model_wdc, 0x9F, 4)] = &mc_wdc_bbr_bbs_c4_apply,
-        [IDX(qe6502_model_wdc, 0x9F, 5)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0x9F, 5)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0x9F, 6)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0x9F, 7)] = &mc_dispatch,
         /* 0xA0 LDY #imm ; class=r_imm */
@@ -1258,13 +1260,13 @@
         [IDX(qe6502_model_wdc, 0xAF, 2)] = &mc_read_latch_addr,
         [IDX(qe6502_model_wdc, 0xAF, 3)] = &mc_wdc_bbr_bbs_c3_offset_or_skip_prefetch,
         [IDX(qe6502_model_wdc, 0xAF, 4)] = &mc_wdc_bbr_bbs_c4_apply,
-        [IDX(qe6502_model_wdc, 0xAF, 5)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0xAF, 5)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0xAF, 6)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0xAF, 7)] = &mc_dispatch,
         /* 0xB0 BCS rel ; class=branch_rel */
         [IDX(qe6502_model_wdc, 0xB0, 0)] = &op_bcs_branch_c0_offset_prefetch,
         [IDX(qe6502_model_wdc, 0xB0, 1)] = &mc_branch_rel_c1_apply,
-        [IDX(qe6502_model_wdc, 0xB0, 2)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0xB0, 2)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0xB0, 3)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0xB0, 4)] = &mc_dispatch,
 
@@ -1370,7 +1372,7 @@
         [IDX(qe6502_model_wdc, 0xBF, 2)] = &mc_read_latch_addr,
         [IDX(qe6502_model_wdc, 0xBF, 3)] = &mc_wdc_bbr_bbs_c3_offset_or_skip_prefetch,
         [IDX(qe6502_model_wdc, 0xBF, 4)] = &mc_wdc_bbr_bbs_c4_apply,
-        [IDX(qe6502_model_wdc, 0xBF, 5)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0xBF, 5)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0xBF, 6)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0xBF, 7)] = &mc_dispatch,
         /* 0xC0 CPY #imm ; class=r_imm */
@@ -1473,13 +1475,13 @@
         [IDX(qe6502_model_wdc, 0xCF, 2)] = &mc_read_latch_addr,
         [IDX(qe6502_model_wdc, 0xCF, 3)] = &mc_wdc_bbr_bbs_c3_offset_or_skip_prefetch,
         [IDX(qe6502_model_wdc, 0xCF, 4)] = &mc_wdc_bbr_bbs_c4_apply,
-        [IDX(qe6502_model_wdc, 0xCF, 5)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0xCF, 5)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0xCF, 6)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0xCF, 7)] = &mc_dispatch,
         /* 0xD0 BNE rel ; class=branch_rel */
         [IDX(qe6502_model_wdc, 0xD0, 0)] = &op_bne_branch_c0_offset_prefetch,
         [IDX(qe6502_model_wdc, 0xD0, 1)] = &mc_branch_rel_c1_apply,
-        [IDX(qe6502_model_wdc, 0xD0, 2)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0xD0, 2)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0xD0, 3)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0xD0, 4)] = &mc_dispatch,
 
@@ -1592,7 +1594,7 @@
         [IDX(qe6502_model_wdc, 0xDF, 2)] = &mc_read_latch_addr,
         [IDX(qe6502_model_wdc, 0xDF, 3)] = &mc_wdc_bbr_bbs_c3_offset_or_skip_prefetch,
         [IDX(qe6502_model_wdc, 0xDF, 4)] = &mc_wdc_bbr_bbs_c4_apply,
-        [IDX(qe6502_model_wdc, 0xDF, 5)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0xDF, 5)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0xDF, 6)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0xDF, 7)] = &mc_dispatch,
         /* 0xE0 CPX #imm ; class=r_imm */
@@ -1698,13 +1700,13 @@
         [IDX(qe6502_model_wdc, 0xEF, 2)] = &mc_read_latch_addr,
         [IDX(qe6502_model_wdc, 0xEF, 3)] = &mc_wdc_bbr_bbs_c3_offset_or_skip_prefetch,
         [IDX(qe6502_model_wdc, 0xEF, 4)] = &mc_wdc_bbr_bbs_c4_apply,
-        [IDX(qe6502_model_wdc, 0xEF, 5)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0xEF, 5)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0xEF, 6)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0xEF, 7)] = &mc_dispatch,
         /* 0xF0 BEQ rel ; class=branch_rel */
         [IDX(qe6502_model_wdc, 0xF0, 0)] = &op_beq_branch_c0_offset_prefetch,
         [IDX(qe6502_model_wdc, 0xF0, 1)] = &mc_branch_rel_c1_apply,
-        [IDX(qe6502_model_wdc, 0xF0, 2)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0xF0, 2)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0xF0, 3)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0xF0, 4)] = &mc_dispatch,
 
@@ -1820,6 +1822,6 @@
         [IDX(qe6502_model_wdc, 0xFF, 2)] = &mc_read_latch_addr,
         [IDX(qe6502_model_wdc, 0xFF, 3)] = &mc_wdc_bbr_bbs_c3_offset_or_skip_prefetch,
         [IDX(qe6502_model_wdc, 0xFF, 4)] = &mc_wdc_bbr_bbs_c4_apply,
-        [IDX(qe6502_model_wdc, 0xFF, 5)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_wdc, 0xFF, 5)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_wdc, 0xFF, 6)] = &mc_fetch,
         [IDX(qe6502_model_wdc, 0xFF, 7)] = &mc_dispatch

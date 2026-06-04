@@ -33,19 +33,24 @@ void cpu::jump_to(std::uint16_t address) noexcept
     tick_ = qe6502_goto(&cpu_, address);
 }
 
-void cpu::set_irq(std::uint8_t level) noexcept
+void cpu::irq(bool assert_irq) noexcept
 {
-    qe6502_set_irq(&cpu_, level);
+    qe6502_irq_assert(&cpu_, assert_irq ? 1 : 0);
 }
 
-std::uint8_t cpu::get_irq() const noexcept
+bool cpu::is_irq_asserted() const noexcept
 {
-    return qe6502_get_irq(&cpu_);
+    return qe6502_is_irq_asserted(&cpu_) != 0;
 }
 
-void cpu::nmi() noexcept
+void cpu::nmi(bool assert_nmi) noexcept
 {
-    qe6502_nmi(&cpu_);
+    qe6502_nmi_assert(&cpu_, assert_nmi ? 1 : 0);
+}
+
+bool cpu::is_nmi_asserted() const noexcept
+{
+    return qe6502_is_nmi_asserted(&cpu_) != 0;
 }
 
 cpu_snapshot cpu::save() const

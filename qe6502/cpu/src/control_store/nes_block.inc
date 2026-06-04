@@ -2,6 +2,8 @@
 
         /* NES service slots. */
 
+        [SERVICE_SLOT_IDX(qe6502_model_nes, service_slot_microcode_hijacked, 1)] = &interrupt_manager,
+
         [SERVICE_SLOT_IDX(qe6502_model_nes, service_slot_illegal_ext, 0)] = &mc_dispatch,
 
         [SERVICE_SLOT_IDX(qe6502_model_nes, service_slot_reset_0, 0)] = &mc_restart_read_00ff,
@@ -159,7 +161,7 @@
         /* 0x10 BPL rel ; class=branch_rel */
         [IDX(qe6502_model_nes, 0x10, 0)] = &op_bpl_branch_c0_offset_prefetch,
         [IDX(qe6502_model_nes, 0x10, 1)] = &mc_branch_rel_c1_apply,
-        [IDX(qe6502_model_nes, 0x10, 2)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_nes, 0x10, 2)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_nes, 0x10, 3)] = &mc_fetch,
         [IDX(qe6502_model_nes, 0x10, 4)] = &mc_dispatch,
 
@@ -406,7 +408,7 @@
         /* 0x30 BMI rel ; class=branch_rel */
         [IDX(qe6502_model_nes, 0x30, 0)] = &op_bmi_branch_c0_offset_prefetch,
         [IDX(qe6502_model_nes, 0x30, 1)] = &mc_branch_rel_c1_apply,
-        [IDX(qe6502_model_nes, 0x30, 2)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_nes, 0x30, 2)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_nes, 0x30, 3)] = &mc_fetch,
         [IDX(qe6502_model_nes, 0x30, 4)] = &mc_dispatch,
 
@@ -651,7 +653,7 @@
         /* 0x50 BVC rel ; class=branch_rel */
         [IDX(qe6502_model_nes, 0x50, 0)] = &op_bvc_branch_c0_offset_prefetch,
         [IDX(qe6502_model_nes, 0x50, 1)] = &mc_branch_rel_c1_apply,
-        [IDX(qe6502_model_nes, 0x50, 2)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_nes, 0x50, 2)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_nes, 0x50, 3)] = &mc_fetch,
         [IDX(qe6502_model_nes, 0x50, 4)] = &mc_dispatch,
 
@@ -898,7 +900,7 @@
         /* 0x70 BVS rel ; class=branch_rel */
         [IDX(qe6502_model_nes, 0x70, 0)] = &op_bvs_branch_c0_offset_prefetch,
         [IDX(qe6502_model_nes, 0x70, 1)] = &mc_branch_rel_c1_apply,
-        [IDX(qe6502_model_nes, 0x70, 2)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_nes, 0x70, 2)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_nes, 0x70, 3)] = &mc_fetch,
         [IDX(qe6502_model_nes, 0x70, 4)] = &mc_dispatch,
 
@@ -1127,7 +1129,7 @@
         /* 0x90 BCC rel ; class=branch_rel */
         [IDX(qe6502_model_nes, 0x90, 0)] = &op_bcc_branch_c0_offset_prefetch,
         [IDX(qe6502_model_nes, 0x90, 1)] = &mc_branch_rel_c1_apply,
-        [IDX(qe6502_model_nes, 0x90, 2)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_nes, 0x90, 2)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_nes, 0x90, 3)] = &mc_fetch,
         [IDX(qe6502_model_nes, 0x90, 4)] = &mc_dispatch,
 
@@ -1345,7 +1347,7 @@
         /* 0xB0 BCS rel ; class=branch_rel */
         [IDX(qe6502_model_nes, 0xB0, 0)] = &op_bcs_branch_c0_offset_prefetch,
         [IDX(qe6502_model_nes, 0xB0, 1)] = &mc_branch_rel_c1_apply,
-        [IDX(qe6502_model_nes, 0xB0, 2)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_nes, 0xB0, 2)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_nes, 0xB0, 3)] = &mc_fetch,
         [IDX(qe6502_model_nes, 0xB0, 4)] = &mc_dispatch,
 
@@ -1573,7 +1575,7 @@
         /* 0xD0 BNE rel ; class=branch_rel */
         [IDX(qe6502_model_nes, 0xD0, 0)] = &op_bne_branch_c0_offset_prefetch,
         [IDX(qe6502_model_nes, 0xD0, 1)] = &mc_branch_rel_c1_apply,
-        [IDX(qe6502_model_nes, 0xD0, 2)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_nes, 0xD0, 2)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_nes, 0xD0, 3)] = &mc_fetch,
         [IDX(qe6502_model_nes, 0xD0, 4)] = &mc_dispatch,
 
@@ -1812,7 +1814,7 @@
         /* 0xF0 BEQ rel ; class=branch_rel */
         [IDX(qe6502_model_nes, 0xF0, 0)] = &op_beq_branch_c0_offset_prefetch,
         [IDX(qe6502_model_nes, 0xF0, 1)] = &mc_branch_rel_c1_apply,
-        [IDX(qe6502_model_nes, 0xF0, 2)] = &mc_branch_pgfix,
+        [IDX(qe6502_model_nes, 0xF0, 2)] = &mc_branch_pgfix_prefetch,
         [IDX(qe6502_model_nes, 0xF0, 3)] = &mc_fetch,
         [IDX(qe6502_model_nes, 0xF0, 4)] = &mc_dispatch,
 

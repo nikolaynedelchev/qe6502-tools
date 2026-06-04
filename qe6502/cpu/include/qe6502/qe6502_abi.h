@@ -142,9 +142,12 @@ QE6502_ABI_API qe6502abi_tick_t qe6502abi_tick(qe6502abi_context_t *ctx, uint32_
 /* Additional execution control. */
 QE6502_ABI_API qe6502abi_tick_t qe6502abi_reset(qe6502abi_context_t *ctx);
 QE6502_ABI_API qe6502abi_tick_t qe6502abi_goto(qe6502abi_context_t *ctx, uint32_t address);
-QE6502_ABI_API void             qe6502abi_nmi(qe6502abi_context_t *ctx);
-QE6502_ABI_API void             qe6502abi_set_irq(qe6502abi_context_t *ctx, uint32_t pin);
-QE6502_ABI_API uint32_t         qe6502abi_get_irq(const qe6502abi_context_t *ctx);
+
+QE6502_ABI_API void qe6502abi_nmi_assert(qe6502abi_context_t *ctx, uint8_t assert_nmi);
+QE6502_ABI_API void qe6502abi_irq_assert(qe6502abi_context_t *ctx, uint8_t assert_irq);
+
+QE6502_ABI_API uint8_t qe6502abi_is_nmi_asserted(const qe6502abi_context_t *ctx);
+QE6502_ABI_API uint8_t qe6502abi_is_irq_asserted(const qe6502abi_context_t *ctx);
 
 /* Execution functions return ticks but do not store them in the ABI context. */
 

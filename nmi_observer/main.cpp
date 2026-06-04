@@ -28,13 +28,35 @@ constexpr std::uint32_t pretest_half_cycle_limit = 20000u;
 constexpr int trace_cycles = 20;
 constexpr int default_nmi_hold_cycles = 1;
 constexpr nodenum_t perfect_clk0 = 1171;
+constexpr nodenum_t perfect_irq = 103;
 constexpr nodenum_t perfect_nmi = 1297;
+
+enum class interrupt_mode {
+    nmi,
+    irq,
+};
+
+const char* interrupt_name(interrupt_mode mode)
+{
+    return mode == interrupt_mode::irq ? "IRQ" : "NMI";
+}
+
+const char* interrupt_name_lower(interrupt_mode mode)
+{
+    return mode == interrupt_mode::irq ? "irq" : "nmi";
+}
+
+nodenum_t interrupt_node(interrupt_mode mode)
+{
+    return mode == interrupt_mode::irq ? perfect_irq : perfect_nmi;
+}
 
 struct options {
     std::optional<std::uint8_t> opcode_filter{};
     std::optional<std::uint32_t> testcase_filter{};
     bool traces = true;
     int nmi_hold_cycles = default_nmi_hold_cycles;
+    interrupt_mode mode = interrupt_mode::nmi;
 };
 
 struct nmi_pulse {
@@ -86,11 +108,12 @@ bool parse_u32(const char* text, std::uint32_t& out)
 void print_usage(const char* argv0)
 {
     std::fprintf(stderr,
-        "usage: %s [--opcode XX] [--case N] [--no-traces] [--nmi-hold-cycles N]\n"
+        "usage: %s [--opcode XX] [--case N] [--no-traces] [--interrupt nmi|irq] [--nmi-hold-cycles N]\n"
         "  --opcode XX:        run only one opcode, decimal or 0x-prefixed\n"
         "  --case N:           run only testcase index N within the selected/all opcodes\n"
         "  --no-traces:        print summaries without full 20-cycle timelines\n"
-        "  --nmi-hold-cycles N: keep NMI asserted for N whole-cycle steps after assert; default 1\n"
+        "  --interrupt MODE:   test nmi or irq; default nmi\n"
+        "  --nmi-hold-cycles N: keep the interrupt line asserted for N whole-cycle steps after assert; default 1\n"
         "  --nmi-hold-tests N:  deprecated alias for --nmi-hold-cycles\n",
         argv0);
 }
@@ -122,6 +145,24 @@ bool parse_args(int argc, char** argv, options& out)
             out.testcase_filter = value;
         } else if (std::strcmp(argv[i], "--no-traces") == 0) {
             out.traces = false;
+        } else if (std::strcmp(argv[i], "--interrupt") == 0) {
+            if (i + 1 >= argc) {
+                print_usage(argv[0]);
+                return false;
+            }
+            const char* mode = argv[++i];
+            if (std::strcmp(mode, "nmi") == 0 || std::strcmp(mode, "NMI") == 0) {
+                out.mode = interrupt_mode::nmi;
+            } else if (std::strcmp(mode, "irq") == 0 || std::strcmp(mode, "IRQ") == 0) {
+                out.mode = interrupt_mode::irq;
+            } else {
+                std::fprintf(stderr, "invalid interrupt mode: %s\n", mode);
+                return false;
+            }
+        } else if (std::strcmp(argv[i], "--nmi") == 0) {
+            out.mode = interrupt_mode::nmi;
+        } else if (std::strcmp(argv[i], "--irq") == 0) {
+            out.mode = interrupt_mode::irq;
         } else if (std::strcmp(argv[i], "--nmi-hold-cycles") == 0 || std::strcmp(argv[i], "--nmi-hold-tests") == 0) {
             if (i + 1 >= argc) {
                 print_usage(argv[0]);
@@ -129,7 +170,7 @@ bool parse_args(int argc, char** argv, options& out)
             }
             std::uint32_t value = 0;
             if (!parse_u32(argv[++i], value) || value == 0u || value > 1000u) {
-                std::fprintf(stderr, "invalid nmi hold cycle count: %s\n", argv[i]);
+                std::fprintf(stderr, "invalid interrupt hold cycle count: %s\n", argv[i]);
                 return false;
             }
             out.nmi_hold_cycles = static_cast<int>(value);
@@ -253,6 +294,17 @@ void apply_mem_values(const std::vector<asm6502::mem_value>& values)
     asm6502::Asm6502::apply(values, memory);
 }
 
+std::vector<asm6502::mem_value> make_irq_handler()
+{
+    return asm6502::Asm6502::New()
+        .begin()
+            .org(irq_trap, "irq_trap")
+                .iny()
+                .jmp("irq_trap")
+        .end()
+        .compile();
+}
+
 std::vector<asm6502::mem_value> make_nmi_handler()
 {
     return asm6502::Asm6502::New()
@@ -264,7 +316,16 @@ std::vector<asm6502::mem_value> make_nmi_handler()
         .compile();
 }
 
-void load_clean_memory(const testcase& test)
+std::uint8_t testcase_status_for_mode(const testcase& test, interrupt_mode mode)
+{
+    constexpr std::uint8_t irq_disable_flag = 0x04u;
+    if (mode == interrupt_mode::irq) {
+        return static_cast<std::uint8_t>(test.P & ~irq_disable_flag);
+    }
+    return test.P;
+}
+
+void load_clean_memory(const testcase& test, interrupt_mode mode)
 {
     std::memset(memory, fill_byte, 65536u);
 
@@ -274,13 +335,14 @@ void load_clean_memory(const testcase& test)
         test.A,
         test.X,
         test.Y,
-        test.P,
+        testcase_status_for_mode(test, mode),
         test.S,
         test.start_at,
         reset_entry,
         irq_trap,
         nmi_trap);
     apply_mem_values(boot);
+    apply_mem_values(make_irq_handler());
     apply_mem_values(make_nmi_handler());
 }
 
@@ -297,9 +359,9 @@ bool align_to_test_start(state_t* perfect, std::uint16_t start_at)
     return false;
 }
 
-trace_result run_trace(const testcase& test, std::optional<nmi_pulse> pulse)
+trace_result run_trace(const testcase& test, std::optional<nmi_pulse> pulse, interrupt_mode mode)
 {
-    load_clean_memory(test);
+    load_clean_memory(test, mode);
     state_t* perfect = initAndResetChip();
     trace_result result{};
 
@@ -313,10 +375,10 @@ trace_result run_trace(const testcase& test, std::optional<nmi_pulse> pulse)
 
     for (int cycle_index = 0; cycle_index < trace_cycles; ++cycle_index) {
         if (pulse.has_value() && pulse->assert_before_cycle == cycle_index) {
-            setNode(perfect, perfect_nmi, 0);
+            setNode(perfect, interrupt_node(mode), 0);
         }
         if (pulse.has_value() && pulse->deassert_before_cycle == cycle_index) {
-            setNode(perfect, perfect_nmi, 1);
+            setNode(perfect, interrupt_node(mode), 1);
         }
 
         if (!perfect_next_step_is_memory_half(perfect)) {
@@ -335,14 +397,14 @@ trace_result run_trace(const testcase& test, std::optional<nmi_pulse> pulse)
     return result;
 }
 
-trace_result run_trace_assert_held(const testcase& test, int inject_before_cycle)
+trace_result run_trace_assert_held(const testcase& test, int inject_before_cycle, interrupt_mode mode)
 {
-    return run_trace(test, nmi_pulse{inject_before_cycle, -1});
+    return run_trace(test, nmi_pulse{inject_before_cycle, -1}, mode);
 }
 
-trace_result run_trace_pulse(const testcase& test, int inject_before_cycle, int hold_cycles)
+trace_result run_trace_pulse(const testcase& test, int inject_before_cycle, int hold_cycles, interrupt_mode mode)
 {
-    return run_trace(test, nmi_pulse{inject_before_cycle, inject_before_cycle + hold_cycles});
+    return run_trace(test, nmi_pulse{inject_before_cycle, inject_before_cycle + hold_cycles}, mode);
 }
 
 const char* classification_text(int diff_cycle, int boundary_cycle)
@@ -376,34 +438,39 @@ bool should_run_case(const options& opts, std::uint32_t index)
     return !opts.testcase_filter.has_value() || *opts.testcase_filter == index;
 }
 
-void print_testcase_header(const testcase& test, std::uint32_t index)
+void print_testcase_header(const testcase& test, std::uint32_t index, interrupt_mode mode)
 {
+    const std::uint8_t effective_p = testcase_status_for_mode(test, mode);
     std::printf("\n=== opcode=$%02X testcase=%" PRIu32 " ===\n",
         static_cast<unsigned>(test.opcode),
         index);
     std::printf("  description: %s\n", test.description.c_str());
-    std::printf("  start_at: $%04X bytes=%u metadata_cycles=%u A=$%02X X=$%02X Y=$%02X P=$%02X S=$%02X\n",
+    std::printf("  start_at: $%04X bytes=%u metadata_cycles=%u A=$%02X X=$%02X Y=$%02X P=$%02X S=$%02X",
         static_cast<unsigned>(test.start_at),
         static_cast<unsigned>(test.bytes),
         static_cast<unsigned>(test.expected_cycles),
         static_cast<unsigned>(test.A),
         static_cast<unsigned>(test.X),
         static_cast<unsigned>(test.Y),
-        static_cast<unsigned>(test.P),
+        static_cast<unsigned>(effective_p),
         static_cast<unsigned>(test.S));
+    if (effective_p != test.P) {
+        std::printf(" original_P=$%02X", static_cast<unsigned>(test.P));
+    }
+    std::printf("\n");
 }
 
 testcase_report run_testcase(const testcase& test, std::uint32_t index, const options& opts)
 {
-    print_testcase_header(test, index);
+    print_testcase_header(test, index, opts.mode);
 
     testcase_report report{};
     report.opcode = test.opcode;
     report.testcase_index = index;
     report.metadata_cycles = test.expected_cycles;
 
-    const trace_result baseline0 = run_trace(test, std::nullopt);
-    const trace_result baseline1 = run_trace(test, std::nullopt);
+    const trace_result baseline0 = run_trace(test, std::nullopt, opts.mode);
+    const trace_result baseline1 = run_trace(test, std::nullopt, opts.mode);
     if (!baseline0.aligned || !baseline1.aligned) {
         std::printf("  ERROR: failed to align perfect6502 to first read from start_at\n");
         return report;
@@ -422,10 +489,10 @@ testcase_report run_testcase(const testcase& test, std::uint32_t index, const op
         return report;
     }
 
-    const trace_result early0 = run_trace_assert_held(test, 0);
-    const trace_result early1 = run_trace_assert_held(test, 0);
+    const trace_result early0 = run_trace_assert_held(test, 0, opts.mode);
+    const trace_result early1 = run_trace_assert_held(test, 0, opts.mode);
     if (!early0.aligned || !early1.aligned) {
-        std::printf("  ERROR: failed to align during early-NMI boundary discovery\n");
+        std::printf("  ERROR: failed to align during early-%s boundary discovery\n", interrupt_name(opts.mode));
         return report;
     }
 
@@ -433,11 +500,13 @@ testcase_report run_testcase(const testcase& test, std::uint32_t index, const op
     report.boundary_cycle_confirm = first_diff_cycle(baseline0.samples, early1.samples);
     report.boundary_reproducible = report.boundary_cycle == report.boundary_cycle_confirm;
 
-    std::printf("  early_nmi_boundary_cycle: %d\n", report.boundary_cycle);
-    std::printf("  early_nmi_boundary_confirm: %d\n", report.boundary_cycle_confirm);
+    std::printf("  early_%s_boundary_cycle: %d\n", interrupt_name_lower(opts.mode), report.boundary_cycle);
+    std::printf("  early_%s_boundary_confirm: %d\n", interrupt_name_lower(opts.mode), report.boundary_cycle_confirm);
     std::printf("  boundary_reproducible: %s\n", report.boundary_reproducible ? "yes" : "no");
     if (opts.traces) {
-        print_trace("early_nmi_trace_20:", early0.samples);
+        char title[64];
+        std::snprintf(title, sizeof(title), "early_%s_trace_20:", interrupt_name_lower(opts.mode));
+        print_trace(title, early0.samples);
         print_trace_diff_window(baseline0.samples, early0.samples, report.boundary_cycle);
     }
 
@@ -449,13 +518,14 @@ testcase_report run_testcase(const testcase& test, std::uint32_t index, const op
     const int primary_scan_last = std::min(trace_cycles - 1, static_cast<int>(test.expected_cycles));
     report.primary_scan_last_cycle = primary_scan_last;
 
-    std::printf("  injection_scan_current_instruction_plus_reserve: inject_range=0..%02d metadata_cycles=%u nmi_hold_cycles=%d\n",
+    std::printf("  injection_scan_current_instruction_plus_reserve: inject_range=0..%02d metadata_cycles=%u %s_hold_cycles=%d\n",
         primary_scan_last,
         static_cast<unsigned>(test.expected_cycles),
+        interrupt_name_lower(opts.mode),
         opts.nmi_hold_cycles);
     for (int inject_cycle = 0; inject_cycle <= primary_scan_last; ++inject_cycle) {
         const int deassert_cycle = inject_cycle + opts.nmi_hold_cycles;
-        const trace_result observed = run_trace_pulse(test, inject_cycle, opts.nmi_hold_cycles);
+        const trace_result observed = run_trace_pulse(test, inject_cycle, opts.nmi_hold_cycles, opts.mode);
         if (!observed.aligned) {
             std::printf("    inject_before_cycle=%02d hold_cycles=%02d deassert_before_cycle=%02d aligned=no\n",
                 inject_cycle,
@@ -501,13 +571,14 @@ testcase_report run_testcase(const testcase& test, std::uint32_t index, const op
     std::printf("\n");
 
     if (primary_scan_last + 1 < trace_cycles) {
-        std::printf("  post_instruction_nop_stream_scan: inject_range=%02d..%02d nmi_hold_cycles=%d\n",
+        std::printf("  post_instruction_nop_stream_scan: inject_range=%02d..%02d %s_hold_cycles=%d\n",
             primary_scan_last + 1,
             trace_cycles - 1,
+            interrupt_name_lower(opts.mode),
             opts.nmi_hold_cycles);
         for (int inject_cycle = primary_scan_last + 1; inject_cycle < trace_cycles; ++inject_cycle) {
             const int deassert_cycle = inject_cycle + opts.nmi_hold_cycles;
-            const trace_result observed = run_trace_pulse(test, inject_cycle, opts.nmi_hold_cycles);
+            const trace_result observed = run_trace_pulse(test, inject_cycle, opts.nmi_hold_cycles, opts.mode);
             if (!observed.aligned) {
                 std::printf("    inject_before_cycle=%02d hold_cycles=%02d deassert_before_cycle=%02d aligned=no\n",
                     inject_cycle,
@@ -605,13 +676,15 @@ int app_main(int argc, char** argv)
     const auto testcases = get_nmos6502_opcode_testcases();
     std::vector<testcase_report> reports{};
 
-    std::printf("nmi_observer: perfect6502-only NMI timing observer\n");
+    std::printf("nmi_observer: perfect6502-only %s timing observer\n", interrupt_name(opts.mode));
+    std::printf("nmi_observer: interrupt mode is %s; use --interrupt nmi|irq to change this\n", interrupt_name_lower(opts.mode));
     std::printf("nmi_observer: memory fill byte is legal NOP $%02X; BRK opcode $00 is skipped\n",
         static_cast<unsigned>(fill_byte));
     std::printf("nmi_observer: each trace records %d whole cycles after first read from testcase.start_at\n",
         trace_cycles);
     std::printf("nmi_observer: primary injection scan is 0..metadata_cycles inclusive; later cycles are reported separately as post-instruction NOP-stream checks\n");
-    std::printf("nmi_observer: for each inject cycle, NMI is deasserted after %d whole-cycle step(s); use --nmi-hold-cycles N to change this\n",
+    std::printf("nmi_observer: for each inject cycle, %s is deasserted after %d whole-cycle step(s); use --nmi-hold-cycles N to change this\n",
+        interrupt_name(opts.mode),
         opts.nmi_hold_cycles);
 
     for (const auto& [opcode, cases] : testcases) {

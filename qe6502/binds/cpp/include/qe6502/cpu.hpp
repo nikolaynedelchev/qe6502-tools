@@ -37,9 +37,10 @@ public:
     void reset() noexcept;
     void jump_to(std::uint16_t address) noexcept;
 
-    void set_irq(std::uint8_t level) noexcept;
-    std::uint8_t get_irq() const noexcept;
-    void nmi() noexcept;
+    void irq(bool assert_irq) noexcept;
+    bool is_irq_asserted() const noexcept;
+    void nmi(bool assert_nmi) noexcept;
+    bool is_nmi_asserted() const noexcept;
 
     const qe6502_tick_t& tick(std::uint8_t input = 0) noexcept;
 
