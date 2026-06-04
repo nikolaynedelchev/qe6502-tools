@@ -28,3 +28,18 @@ target_include_directories(${target}
 qe6502_configure_warnings(${target})
 
 target_compile_features(${target} PUBLIC cxx_std_20)
+
+
+add_executable(cpu6502_interrupt_observer
+    cpu6502_interrupt_observer.cpp
+    testaces.cpp
+)
+
+target_link_libraries(cpu6502_interrupt_observer
+    PRIVATE
+        cpu6502_bridge::cpu6502_bridge
+        asm6502::asm6502
+)
+
+qe6502_configure_warnings(cpu6502_interrupt_observer)
+target_compile_features(cpu6502_interrupt_observer PUBLIC cxx_std_20)
