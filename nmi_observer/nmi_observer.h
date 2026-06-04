@@ -26,5 +26,6 @@ struct testcase
 };
 
 std::map<uint8_t, std::vector<testcase>> get_example_testcases();
+std::map<uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases();
 
 } // namespace nmi_observer

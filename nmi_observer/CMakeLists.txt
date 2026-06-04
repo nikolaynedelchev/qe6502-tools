@@ -2,6 +2,10 @@ enable_language(CXX)
 
 set(target nmi_observer)
 
+if(NOT TARGET perfect6502)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/qe6502/harness/third_party/perfect6502 ${CMAKE_CURRENT_BINARY_DIR}/perfect6502)
+endif()
+
 add_executable(${target}
     main.cpp
     testaces.cpp
@@ -18,6 +22,7 @@ target_link_libraries(${target}
 target_include_directories(${target}
     PRIVATE
         ${PROJECT_SOURCE_DIR}/qe6502/binds/cpp/include
+        ${PROJECT_SOURCE_DIR}/qe6502/harness/third_party/perfect6502
 )
 
 qe6502_configure_warnings(${target})
