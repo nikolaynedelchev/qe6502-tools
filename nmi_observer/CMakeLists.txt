@@ -45,7 +45,6 @@ qe6502_configure_warnings(cpu6502_interrupt_observer)
 target_compile_features(cpu6502_interrupt_observer PUBLIC cxx_std_20)
 
 add_library(nmi_observer_scripted_testcase_runner STATIC
-    testaces.cpp
     test_debugger.cpp
     test_debugger.h
     scripted_testcase_runner.cpp
@@ -116,8 +115,9 @@ add_test(NAME nmi_observer_debug_console_smoke
     COMMAND nmi_observer_debug_console
         --no-banner
         --backend qe6502
-        --source ${CMAKE_CURRENT_SOURCE_DIR}/debug_console_smoke_script.txt
+        --run-script-file ${CMAKE_CURRENT_SOURCE_DIR}/debug_console_smoke_script.txt
         --command terminal_help
-        --exit-after-source
+        --command detailed_help
+        --exit-after-script
 )
 

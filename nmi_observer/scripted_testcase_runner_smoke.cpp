@@ -1,14 +1,13 @@
 #include "test_debugger.h"
 
+#include <asm6502/asm6502.h>
 #include <cpu6502_bridge/cpu.hpp>
 
-#include <asm6502/asm6502.h>
-
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <string>
-#include <vector>
 
 namespace {
 
@@ -28,125 +27,80 @@ unsigned count_occurrences(const std::string& text, const std::string& marker)
     return count;
 }
 
-nmi_observer::testcase make_smoke_testcase()
-{
-    nmi_observer::testcase test{};
-    test.opcode = 0xEAu;
-    test.bytes = 1u;
-    test.expected_cycles = 2u;
-    test.start_at = 0x9000u;
-    test.nmi_vector = 0xE200u;
-    test.A = 0x11u;
-    test.X = 0x22u;
-    test.Y = 0x33u;
-    test.P = 0x24u;
-    test.S = 0xF8u;
-    test.description = "scripted debugger smoke NOP";
-    test.mem_setup = asm6502::Asm6502::New()
-        .begin()
-            .org(test.start_at, "test_start")
-                .nop()
-                .nop()
-                .jmp("test_start")
-        .end()
-        .compile();
-    return test;
-}
-
 } // namespace
 
 int main()
 {
     std::unique_ptr<cpu6502_bridge::ICpu> cpu = cpu6502_bridge::make_qe6502_cpu();
-    const nmi_observer::testcase test = make_smoke_testcase();
+    std::fill(cpu->memory(), cpu->memory() + 65536u, 0x00u);
 
-    nmi_observer::TestDebugger testcase_debugger;
-    testcase_debugger.load_testcase(*cpu, test);
-    const std::string testcase_log = testcase_debugger.execute_script(
-        "restart_to_test\n"
-        "cycle_details\n"
-        "log_registers_on log_bus_state_on step_2 log_registers_off log_bus_state_off\n"
-        "nmi_assert step nmi_deassert\n"
-        "log_registers log_bus_state log_stack log_mem_0x00aa_to_0x00ac log_vectors\n");
+    const std::vector<asm6502::mem_value> boot = asm6502::bootstrap_program(
+        0x11u, 0x22u, 0x33u, 0x24u, 0xF8u,
+        0x8000u, 0x0200u, 0x9100u, 0x9000u);
+    asm6502::Asm6502::apply(boot, cpu->memory());
+    cpu->memory()[0x8000u] = 0xEAu;
+    cpu->memory()[0x8001u] = 0xEAu;
+    cpu->memory()[0x8002u] = 0x4Cu;
+    cpu->memory()[0x8003u] = 0x02u;
+    cpu->memory()[0x8004u] = 0x80u;
 
-    const bool testcase_ok = contains(testcase_log, "restart_to_test")
-        && contains(testcase_log, "aligned=yes")
-        && contains(testcase_log, "cycle_details")
-        && contains(testcase_log, "log_registers=on")
-        && contains(testcase_log, "log_bus_state=on")
-        && contains(testcase_log, "log_registers=off")
-        && contains(testcase_log, "nmi=asserted")
-        && contains(testcase_log, "mem $00AA..$00AC")
-        && count_occurrences(testcase_log, "stepped cycle=") >= 3u
-        && count_occurrences(testcase_log, "registers") >= 4u
-        && count_occurrences(testcase_log, "bus") >= 4u;
+    nmi_observer::TestDebugger debugger;
+    debugger.attach_cpu(*cpu);
 
-    if (!testcase_ok) {
-        std::cerr << "TestDebugger testcase smoke output did not contain expected markers\n";
-        std::cerr << testcase_log;
+    const std::string help = debugger.help();
+    if (!contains(help, "restart_to_start_fetch")
+        || !contains(help, "step_N")
+        || contains(help, "restart_to_test")) {
+        std::cerr << "TestDebugger help has unexpected/missing markers\n" << help;
         return EXIT_FAILURE;
     }
 
-    const std::vector<asm6502::mem_value> program = asm6502::Asm6502::New()
-        .begin()
-            .org(0x8000u, "start")
-                .nop()
-                .nop()
-                .lda(0x42u)
-                .jmp("done")
-            .org(0x8007u, "done")
-                .nop()
-                .jmp("done")
-            .org(0xFFFCu)
-                .dw("start")
-        .end()
-        .compile();
+    std::string log;
+    log += debugger.restart_to_start_fetch();
+    log += debugger.execute_command("run_to_0x8000");
+    log += debugger.execute_command("cycle_details");
+    log += debugger.execute_command("log_registers_on");
+    log += debugger.execute_command("log_bus_state_on");
+    log += debugger.execute_command("step_2");
+    log += debugger.execute_command("log_registers_off");
+    log += debugger.execute_command("log_bus_state_off");
+    log += debugger.execute_command("nmi_assert");
+    log += debugger.execute_command("step");
+    log += debugger.execute_command("nmi_deassert");
+    log += debugger.execute_command("log_mem_0x8000_to_0x8004");
+    log += debugger.execute_command("log_vectors");
 
-    nmi_observer::TestDebugger program_debugger;
-    program_debugger.load_program(*cpu, program);
+    const bool ok = contains(log, "restart_to_start_fetch")
+        && contains(log, "run_to address=$8000")
+        && contains(log, "reached=yes")
+        && contains(log, "cycle_details")
+        && contains(log, "registers PC=$8000 A=$11 X=$22 Y=$33 S=$F8")
+        && contains(log, "log_registers=on")
+        && contains(log, "log_bus_state=on")
+        && contains(log, "log_registers=off")
+        && contains(log, "nmi=asserted")
+        && contains(log, "mem $8000..$8004")
+        && count_occurrences(log, "stepped cycle=") >= 3u
+        && count_occurrences(log, "registers") >= 4u
+        && count_occurrences(log, "bus") >= 4u;
 
-    std::string program_log;
-    program_log += program_debugger.restart_to_test(); // raw program: same as restart_to_start_fetch
-    program_log += program_debugger.execute_command("log_bus_state_on");
-    program_log += program_debugger.execute_command("run_to_0x8007");
-    program_log += program_debugger.execute_command("log_bus_state_off");
-    program_log += program_debugger.log_registers();
-
-    const bool program_ok = contains(program_log, "restart_to_start_fetch")
-        && contains(program_log, "run_to address=$8007")
-        && contains(program_log, "log_bus_state=on")
-        && contains(program_log, "log_bus_state=off")
-        && contains(program_log, "reached=yes")
-        && contains(program_log, "registers");
-
-    if (!program_ok) {
-        std::cerr << "TestDebugger program smoke output did not contain expected markers\n";
-        std::cerr << program_log;
+    if (!ok) {
+        std::cerr << "TestDebugger smoke output did not contain expected markers\n";
+        std::cerr << log;
         return EXIT_FAILURE;
     }
 
-    const std::string wrapper_log = nmi_observer::run_scripted_program(
-        *cpu,
-        program,
-        "restart_to_start_fetch step_2 run_to_0x8007 log_bus_state");
-
-    if (!contains(wrapper_log, "scripted_program") || !contains(wrapper_log, "run_to address=$8007")) {
-        std::cerr << "run_scripted_program wrapper smoke output did not contain expected markers\n";
-        std::cerr << wrapper_log;
+    try {
+        (void)debugger.execute_command("restart_to_test");
+        std::cerr << "restart_to_test unexpectedly succeeded\n";
         return EXIT_FAILURE;
+    } catch (const std::exception& error) {
+        if (std::string(error.what()).find("unknown TestDebugger command") == std::string::npos) {
+            std::cerr << "restart_to_test produced unexpected error: " << error.what() << "\n";
+            return EXIT_FAILURE;
+        }
     }
 
-    const std::string testcase_wrapper_log = nmi_observer::run_scripted_testcase(
-        *cpu,
-        test,
-        "restart_to_test run_to_0x9001 log_bus_state");
-
-    if (!contains(testcase_wrapper_log, "scripted_testcase") || !contains(testcase_wrapper_log, "run_to address=$9001")) {
-        std::cerr << "run_scripted_testcase wrapper smoke output did not contain expected markers\n";
-        std::cerr << testcase_wrapper_log;
-        return EXIT_FAILURE;
-    }
-
-    std::cout << testcase_log << program_log << wrapper_log << testcase_wrapper_log;
+    std::cout << help << log;
     return EXIT_SUCCESS;
 }

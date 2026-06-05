@@ -1,24 +1,20 @@
 #include "test_debugger.h"
 
-#include <algorithm>
 #include <cctype>
 #include <charconv>
 #include <iomanip>
+#include <optional>
+#include <utility>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <vector>
 #include <system_error>
-#include <utility>
 
 namespace nmi_observer {
 namespace {
 
-constexpr std::uint8_t fill_byte = 0xEAu; // legal NOP
-constexpr std::uint16_t reset_entry = 0xE000u;
-constexpr std::uint16_t irq_trap = 0xE100u;
-constexpr std::uint16_t nmi_trap = 0xE200u;
-constexpr unsigned bootstrap_to_test_cycle_limit = 20000u;
 
 std::string hex8(std::uint8_t value)
 {
@@ -34,33 +30,6 @@ std::string hex16(std::uint16_t value)
     out << "$" << std::uppercase << std::hex << std::setw(4) << std::setfill('0')
         << static_cast<unsigned>(value);
     return out.str();
-}
-
-void apply_mem_values(cpu6502_bridge::ICpu& cpu, const std::vector<asm6502::mem_value>& values)
-{
-    asm6502::Asm6502::apply(values, cpu.memory());
-}
-
-std::vector<asm6502::mem_value> make_irq_handler()
-{
-    return asm6502::Asm6502::New()
-        .begin()
-            .org(irq_trap, "irq_trap")
-                .iny()
-                .jmp("irq_trap")
-        .end()
-        .compile();
-}
-
-std::vector<asm6502::mem_value> make_nmi_handler()
-{
-    return asm6502::Asm6502::New()
-        .begin()
-            .org(nmi_trap, "nmi_trap")
-                .inx()
-                .jmp("nmi_trap")
-        .end()
-        .compile();
 }
 
 std::vector<std::string> tokenize(std::string_view script)
@@ -189,24 +158,15 @@ std::optional<std::pair<std::uint16_t, std::uint16_t>> parse_log_mem_range(std::
 
 } // namespace
 
-void TestDebugger::load_testcase(cpu6502_bridge::ICpu& cpu, const testcase& test)
+void TestDebugger::attach_cpu(cpu6502_bridge::ICpu& cpu)
 {
     cpu_ = &cpu;
-    loaded_ = loaded_kind::testcase;
-    test_ = test;
-    program_.clear();
     cycle_ = 0;
-    reset_loaded_memory();
-}
-
-void TestDebugger::load_program(cpu6502_bridge::ICpu& cpu, const std::vector<asm6502::mem_value>& program)
-{
-    cpu_ = &cpu;
-    loaded_ = loaded_kind::program;
-    test_.reset();
-    program_ = program;
-    cycle_ = 0;
-    reset_loaded_memory();
+    after_step_log_registers_ = false;
+    after_step_log_bus_state_ = false;
+    after_step_log_stack_ = false;
+    after_step_log_vectors_ = false;
+    after_step_cycle_details_ = false;
 }
 
 std::string TestDebugger::execute_script(std::string_view script)
@@ -233,9 +193,6 @@ std::string TestDebugger::execute_command(std::string_view command_text)
     }
     if (command == "restart_to_start_fetch") {
         return restart_to_start_fetch();
-    }
-    if (command == "restart_to_test") {
-        return restart_to_test();
     }
     if (command == "step") {
         return step();
@@ -318,7 +275,6 @@ std::string TestDebugger::help() const
         "help                         Show debugger commands.\n"
         "restart                      Reset CPU and keep reset bus state.\n"
         "restart_to_start_fetch       Reset and stop at reset-vector opcode fetch.\n"
-        "restart_to_test              Testcase: run bootstrap to test opcode; raw program: same as restart_to_start_fetch.\n"
         "step                         Execute one bus cycle.\n"
         "step_N                       Execute N bus cycles, e.g. step_10. Per-step logs still run each cycle.\n"
         "run_to_0xabcd                Run until opcode fetch at address 0xabcd.\n"
@@ -339,7 +295,6 @@ std::string TestDebugger::help() const
 
 std::string TestDebugger::restart()
 {
-    reset_loaded_memory();
     cpu().irq(false);
     cpu().nmi(false);
     cpu().restart();
@@ -349,7 +304,6 @@ std::string TestDebugger::restart()
 
 std::string TestDebugger::restart_to_start_fetch()
 {
-    reset_loaded_memory();
     cpu().irq(false);
     cpu().nmi(false);
     const unsigned steps = cpu().restart_to_start_fetch();
@@ -359,45 +313,6 @@ std::string TestDebugger::restart_to_start_fetch()
     out << "restart_to_start_fetch steps=" << steps
         << " address=" << hex16(cpu().bus_address())
         << " data=" << hex8(cpu().bus_data())
-        << "\n";
-    return out.str();
-}
-
-std::string TestDebugger::restart_to_test()
-{
-    if (loaded_ != loaded_kind::testcase) {
-        return restart_to_start_fetch();
-    }
-
-    reset_loaded_memory();
-    cpu().irq(false);
-    cpu().nmi(false);
-    cpu().restart();
-
-    const testcase& test = *test_;
-    for (unsigned steps = 0; steps < bootstrap_to_test_cycle_limit; ++steps) {
-        if (cpu().is_opcode_fetch()
-            && !cpu().is_write()
-            && cpu().bus_address() == test.start_at
-            && cpu().bus_data() == test.opcode) {
-            cycle_ = steps;
-            std::ostringstream out;
-            out << "restart_to_test steps=" << steps << " aligned=yes"
-                << " start_at=" << hex16(test.start_at)
-                << " opcode=" << hex8(test.opcode)
-                << "\n";
-            return out.str();
-        }
-        cpu().step();
-    }
-
-    cycle_ = bootstrap_to_test_cycle_limit;
-    std::ostringstream out;
-    out << "restart_to_test steps=" << bootstrap_to_test_cycle_limit << " aligned=no"
-        << " wanted_start_at=" << hex16(test.start_at)
-        << " wanted_opcode=" << hex8(test.opcode)
-        << " current_address=" << hex16(cpu().bus_address())
-        << " current_data=" << hex8(cpu().bus_data())
         << "\n";
     return out.str();
 }
@@ -549,11 +464,6 @@ std::string TestDebugger::log_mem(std::uint16_t first, std::uint16_t last) const
     return out.str();
 }
 
-std::string TestDebugger::log_mem_0xaa_to_0xac() const
-{
-    return log_mem(0x00AAu, 0x00ACu);
-}
-
 std::string TestDebugger::log_vectors() const
 {
     return log_mem(0xFFFAu, 0xFFFFu);
@@ -666,68 +576,5 @@ cpu6502_bridge::ICpu& TestDebugger::cpu() const
     return *cpu_;
 }
 
-void TestDebugger::reset_loaded_memory()
-{
-    if (cpu_ == nullptr || loaded_ == loaded_kind::none) {
-        throw std::runtime_error("TestDebugger has no loaded testcase/program");
-    }
-
-    std::uint8_t* mem = cpu_->memory();
-    std::fill(mem, mem + 65536u, fill_byte);
-
-    if (loaded_ == loaded_kind::testcase) {
-        const testcase& test = *test_;
-        apply_mem_values(*cpu_, test.mem_setup);
-
-        const auto boot = asm6502::bootstrap_program(
-            test.A,
-            test.X,
-            test.Y,
-            test.P,
-            test.S,
-            test.start_at,
-            reset_entry,
-            irq_trap,
-            nmi_trap);
-        apply_mem_values(*cpu_, boot);
-        apply_mem_values(*cpu_, make_irq_handler());
-        apply_mem_values(*cpu_, make_nmi_handler());
-        return;
-    }
-
-    apply_mem_values(*cpu_, program_);
-}
-
-std::string run_scripted_testcase(
-    cpu6502_bridge::ICpu& cpu,
-    const testcase& test,
-    std::string_view script)
-{
-    TestDebugger debugger;
-    debugger.load_testcase(cpu, test);
-
-    std::ostringstream out;
-    out << "scripted_testcase"
-        << " opcode=" << hex8(test.opcode)
-        << " start_at=" << hex16(test.start_at)
-        << " expected_cycles=" << static_cast<unsigned>(test.expected_cycles)
-        << " description=\"" << test.description << "\"\n";
-    out << debugger.execute_script(script);
-    return out.str();
-}
-
-std::string run_scripted_program(
-    cpu6502_bridge::ICpu& cpu,
-    const std::vector<asm6502::mem_value>& program,
-    std::string_view script)
-{
-    TestDebugger debugger;
-    debugger.load_program(cpu, program);
-
-    std::ostringstream out;
-    out << "scripted_program bytes=" << program.size() << "\n";
-    out << debugger.execute_script(script);
-    return out.str();
-}
 
 } // namespace nmi_observer

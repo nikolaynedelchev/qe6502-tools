@@ -91,7 +91,10 @@ std::optional<unsigned> parse_number(std::string_view text, unsigned max_value)
 
 std::optional<asm6502::mem_value> parse_mem_assignment(std::string_view text)
 {
-    const std::size_t equals = text.find('=');
+    std::size_t equals = text.find('=');
+    if (equals == std::string_view::npos) {
+        equals = text.find(':');
+    }
     if (equals == std::string_view::npos || equals == 0u || equals + 1u >= text.size()) {
         return std::nullopt;
     }
@@ -108,6 +111,92 @@ std::optional<asm6502::mem_value> parse_mem_assignment(std::string_view text)
     };
 }
 
+
+std::string detailed_help()
+{
+    std::ostringstream out;
+    out << "Debug console guide:\n"
+        << "1. Select a backend first. Backend selection creates a fresh CPU and clears memory.\n"
+        << "     backend_qe6502\n"
+        << "     backend_perfect6502\n\n"
+        << "2. Script files are line-based. Use one command per line.\n"
+        << "   Use run_script_file <path> interactively, or --run-script-file <path> from the command line.\n\n"
+        << "3. Memory setup is explicit. There is no reload and no remembered program/testcase.\n"
+        << "   If you want a clean layout, say memory_clear and then write exactly the bytes you need.\n\n"
+        << "4. Raw memory probes can write bytes directly after a backend is selected:\n"
+        << "     0xfffc=0x00\n"
+        << "     0xfffd=0x80\n"
+        << "     0x8000=0xea\n"
+        << "   ':' is also accepted: 0x8000:0xea. Byte writes are immediate and are not replayed later.\n\n"
+        << "5. bootstrap writes asm6502 bootstrap bytes once. Only these key names are accepted:\n"
+        << "     start_at a x y p s reset_vector brk_irq_vector nmi_vector\n"
+        << "   start_at is required; other values have defaults.\n"
+        << "   Important: bootstrap code is loaded at reset_vector, then it sets registers and jumps to start_at.\n\n"
+        << "6. Minimal raw program bootstrap example:\n"
+        << "     backend_qe6502\n"
+        << "     memory_clear\n"
+        << "     bootstrap start_at=0x0400 a=0x12 x=0x45 y=0x10 p=0x24 s=0xfd\n"
+        << "     0x0400=0xea\n"
+        << "     0x0401=0xff\n"
+        << "     run_to_0x0400\n"
+        << "     cycle_details\n\n"
+        << "7. Example usage: run one NMI probe against qe6502.\n"
+        << "   Start command:\n"
+        << "     nmi_observer_debug_console --no-banner --backend qe6502 --run-script-file nmi_nop_probe.txt --exit-after-script\n"
+        << "   Script file nmi_nop_probe.txt:\n"
+        << "     memory_clear\n"
+        << "     bootstrap start_at=0x0400 a=0x00 x=0x00 y=0x00 p=0x24 s=0xfd reset_vector=0x0200 brk_irq_vector=0x9100 nmi_vector=0x9000\n"
+        << "     0x0400=0xea\n"
+        << "     0x0401=0xea\n"
+        << "     0x0402=0xea\n"
+        << "     0x9000=0xea\n"
+        << "     0x9001=0xea\n"
+        << "     run_to_0x0400\n"
+        << "     cycle_details\n"
+        << "     nmi_assert\n"
+        << "     log_bus_state_on\n"
+        << "     log_registers_on\n"
+        << "     step_24\n\n"
+        << "8. Example usage: run the same IRQ probe against both backends.\n"
+        << "   Start commands:\n"
+        << "     nmi_observer_debug_console --no-banner --backend qe6502 --run-script-file irq_lda_probe.txt --exit-after-script\n"
+        << "     nmi_observer_debug_console --no-banner --backend perfect6502 --run-script-file irq_lda_probe.txt --exit-after-script\n"
+        << "   Script file irq_lda_probe.txt:\n"
+        << "     memory_clear\n"
+        << "     bootstrap start_at=0x0400 a=0x00 x=0x00 y=0x00 p=0x24 s=0xfd reset_vector=0x0200 brk_irq_vector=0x9100 nmi_vector=0x9000\n"
+        << "     0x0400=0x58\n"
+        << "     0x0401=0xad\n"
+        << "     0x0402=0x00\n"
+        << "     0x0403=0x20\n"
+        << "     0x0404=0xea\n"
+        << "     0x2000=0x42\n"
+        << "     0x9000=0xea\n"
+        << "     0x9100=0xea\n"
+        << "     run_to_0x0400\n"
+        << "     cycle_details\n"
+        << "     step_2\n"
+        << "     irq_assert\n"
+        << "     nmi_deassert\n"
+        << "     log_bus_state_on\n"
+        << "     log_registers_on\n"
+        << "     step_28\n\n"
+        << "9. You can patch memory during execution. Example:\n"
+        << "     step_2\n"
+        << "     0x8002=0x00\n"
+        << "     step_10\n\n"
+        << "10. Useful debugger logging commands:\n"
+        << "     log_bus_state_on     show address/data/fetch/write after each step\n"
+        << "     log_registers_on     show registers after each step\n"
+        << "     cycle_details_on     show registers, bus state, and stack after each step\n"
+        << "     step_N               execute N bus cycles, e.g. step_20\n\n"
+        << "11. load_program_inline is still available for short one-line layouts:\n"
+        << "     load_program_inline probe 0xfffc=0x00 0xfffd=0x80 0x8000=0xea\n\n"
+        << "12. repeat can run one console command several times:\n"
+        << "     repeat 5 step\n\n"
+        << "Use help for the compact command list and terminal_help for DebugTerminal/TestDebugger commands.\n";
+    return out.str();
+}
+
 std::string console_help(const nmi_observer::DebugTerminal& terminal)
 {
     std::ostringstream out;
@@ -115,18 +204,26 @@ std::string console_help(const nmi_observer::DebugTerminal& terminal)
         << "help                         Show this help plus terminal/debugger help.\n"
         << "app_help                     Show only console app commands.\n"
         << "terminal_help                Show DebugTerminal/TestDebugger commands.\n"
-        << "source <file>                Run one command per non-empty line from file.\n"
+        << "detailed_help | guide        Show practical usage guide and scripting tips.\n"
+        << "run_script_file <file>       Run one command per non-empty line from file.\n"
+        << "source <file>                Alias for run_script_file.\n"
         << "repeat <N> <command>         Run one command N times.\n"
+        << "memory_clear                 Fill selected backend memory with $00.\n"
+        << "bootstrap start_at=0xADDR ...\n"
+        << "                             Write asm6502 bootstrap bytes once. See detailed_help.\n"
         << "load_program_inline <name> A=V ...\n"
-        << "                             Load raw bytes, e.g. 0xfffc=0x00 0x8000=0xea.\n"
+        << "                             Write raw bytes once, e.g. 0xfffc=0x00 0x8000=0xea.\n"
+        << "0xADDR=0xBYTE                Write byte to selected backend memory.\n"
+        << "0xADDR:0xBYTE                Same as 0xADDR=0xBYTE.\n"
         << "exit | quit                  Exit interactive console.\n"
-        << "# comment                    Ignored in interactive/source input.\n"
         << "\nCommand line options:\n"
         << "--help                       Print this help and exit.\n"
         << "--backend qe6502|perfect6502 Select backend before commands/source files.\n"
         << "--command <line>             Execute one console line before interactive mode.\n"
-        << "--source <file>              Execute source file before interactive mode.\n"
-        << "--exit-after-source          Exit after --command/--source work.\n"
+        << "--run-script-file <file>     Execute script file before interactive mode.\n"
+        << "--source <file>              Alias for --run-script-file.\n"
+        << "--exit-after-script          Exit after startup commands/scripts.\n"
+        << "--exit-after-source          Alias for --exit-after-script.\n"
         << "--no-banner                  Suppress startup banner.\n\n"
         << terminal.help();
     return out.str();
@@ -139,10 +236,17 @@ std::string app_help_only()
         << "help                         Show this help plus terminal/debugger help.\n"
         << "app_help                     Show only console app commands.\n"
         << "terminal_help                Show DebugTerminal/TestDebugger commands.\n"
-        << "source <file>                Run one command per non-empty line from file.\n"
+        << "detailed_help | guide        Show practical usage guide and scripting tips.\n"
+        << "run_script_file <file>       Run one command per non-empty line from file.\n"
+        << "source <file>                Alias for run_script_file.\n"
         << "repeat <N> <command>         Run one command N times.\n"
+        << "memory_clear                 Fill selected backend memory with $00.\n"
+        << "bootstrap start_at=0xADDR ...\n"
+        << "                             Write asm6502 bootstrap bytes once. See detailed_help.\n"
         << "load_program_inline <name> A=V ...\n"
-        << "                             Load raw bytes, e.g. 0xfffc=0x00 0x8000=0xea.\n"
+        << "                             Write raw bytes once, e.g. 0xfffc=0x00 0x8000=0xea.\n"
+        << "0xADDR=0xBYTE                Write byte to selected backend memory.\n"
+        << "0xADDR:0xBYTE                Same as 0xADDR=0xBYTE.\n"
         << "exit | quit                  Exit interactive console.\n"
         << "# comment                    Ignored in interactive/source input.\n";
     return out.str();
@@ -166,9 +270,15 @@ public:
         if (line == "terminal_help") {
             return terminal_.help();
         }
+        if (line == "detailed_help" || line == "guide") {
+            return detailed_help();
+        }
         if (line == "exit" || line == "quit") {
             exit_requested_ = true;
             return "exit requested\n";
+        }
+        if (starts_with(line, "run_script_file ")) {
+            return source_file(trim_copy(std::string_view(line).substr(16u)));
         }
         if (starts_with(line, "source ")) {
             return source_file(trim_copy(std::string_view(line).substr(7u)));
@@ -192,16 +302,16 @@ private:
     std::string source_file(const std::string& path)
     {
         if (path.empty()) {
-            return "source error: missing file path\n";
+            return "run_script_file error: missing file path\n";
         }
 
         std::ifstream input(path);
         if (!input) {
-            return "source error: cannot open " + path + "\n";
+            return "run_script_file error: cannot open " + path + "\n";
         }
 
         std::ostringstream out;
-        out << "source begin " << path << "\n";
+        out << "script begin " << path << "\n";
         std::string line;
         unsigned line_number = 0;
         while (std::getline(input, line)) {
@@ -218,7 +328,7 @@ private:
                 out << "source " << path << ':' << line_number << " error: " << error.what() << "\n";
             }
         }
-        out << "source end " << path << "\n";
+        out << "script end " << path << "\n";
         return out.str();
     }
 
@@ -290,7 +400,7 @@ int run_console(int argc, char** argv)
             show_banner = false;
             continue;
         }
-        if (arg == "--exit-after-source") {
+        if (arg == "--exit-after-source" || arg == "--exit-after-script") {
             exit_after_source = true;
             continue;
         }
@@ -318,12 +428,12 @@ int run_console(int argc, char** argv)
             startup_commands.push_back(argv[++i]);
             continue;
         }
-        if (arg == "--source") {
+        if (arg == "--source" || arg == "--run-script-file") {
             if (i + 1 >= argc) {
-                std::cerr << "--source requires a file path\n";
+                std::cerr << arg << " requires a file path\n";
                 return 2;
             }
-            startup_commands.push_back("source " + std::string(argv[++i]));
+            startup_commands.push_back("run_script_file " + std::string(argv[++i]));
             continue;
         }
 
