@@ -4,6 +4,12 @@
 
 namespace cpu6502_bridge {
 
+void ICpu::clear_memory(uint8_t value) noexcept
+{
+    uint8_t* mem = memory();
+    std::memset(mem, value, 65536);
+}
+
 unsigned ICpu::restart_to_start_fetch(
     unsigned max_steps)
 {

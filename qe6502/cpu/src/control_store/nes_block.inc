@@ -6,9 +6,9 @@
 
         [SERVICE_SLOT_IDX(qe6502_model_nes, service_slot_illegal_ext, 0)] = &mc_dispatch,
 
-        [SERVICE_SLOT_IDX(qe6502_model_nes, service_slot_reset_0, 0)] = &mc_restart_read_00ff,
-        [SERVICE_SLOT_IDX(qe6502_model_nes, service_slot_reset_0, 1)] = &mc_restart_read_00ff_fetch,
-        [SERVICE_SLOT_IDX(qe6502_model_nes, service_slot_reset_0, 2)] = &mc_restart_read_00ff,
+        [SERVICE_SLOT_IDX(qe6502_model_nes, service_slot_reset_0, 0)] = &mc_restart_read_hhff,
+        [SERVICE_SLOT_IDX(qe6502_model_nes, service_slot_reset_0, 1)] = &mc_restart_read_zzhh_fetch,
+        [SERVICE_SLOT_IDX(qe6502_model_nes, service_slot_reset_0, 2)] = &mc_restart_read_zzhh,
         [SERVICE_SLOT_IDX(qe6502_model_nes, service_slot_reset_0, 3)] = &mc_reset_stack_read,
         [SERVICE_SLOT_IDX(qe6502_model_nes, service_slot_reset_0, 4)] = &mc_reset_stack_read,
         [SERVICE_SLOT_IDX(qe6502_model_nes, service_slot_reset_0, 5)] = &mc_reset_stack_read,

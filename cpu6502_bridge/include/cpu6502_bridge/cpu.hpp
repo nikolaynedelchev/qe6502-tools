@@ -12,6 +12,7 @@ class ICpu
 public:
     virtual ~ICpu() = default;
 
+    void clear_memory(uint8_t value) noexcept;
     virtual void restart() noexcept = 0;
 
     // Performs restart sequencing and stops when the first real opcode fetch

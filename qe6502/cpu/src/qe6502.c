@@ -604,22 +604,26 @@ static qe6502_tick_t mc_stack_pull_read(qe6502_t* cpu, uint8_t bus)
     return stack_read(cpu);
 }
 
-/* service_handler; role=restart_dummy; action=read_restart_dummy_address */
-static qe6502_tick_t mc_restart_read_00ff(qe6502_t* cpu, uint8_t bus)
+static qe6502_tick_t mc_restart_read_hhff(qe6502_t* cpu, uint8_t bus)
 {
-    (void) bus;
-
+    cpu->PC = (uint16_t)((bus << 8) | 0xff);
     return read(cpu, cpu->PC);
 }
 
-/* service_handler; role=restart_dummy; action=read_restart_dummy_address */
-static qe6502_tick_t mc_restart_read_00ff_fetch(qe6502_t* cpu, uint8_t bus)
+static qe6502_tick_t mc_restart_read_zzhh_fetch(qe6502_t* cpu, uint8_t bus)
 {
-    (void)bus;
-
+    cpu->PC = (uint16_t)(cpu->PC >> 8);
+    cpu->PC--;
+    cpu->PC = (uint16_t)((bus << 8) | cpu->PC);
     return fetch(cpu);
 }
 
+static qe6502_tick_t mc_restart_read_zzhh(qe6502_t* cpu, uint8_t bus)
+{
+    (void)bus;
+
+    return read(cpu, cpu->PC);
+}
 
 /* service_handler; role=reset_stack_read; action=read_stack_current_s_and_decrement_s */
 static qe6502_tick_t mc_reset_stack_read(qe6502_t* cpu, uint8_t bus)
@@ -2847,8 +2851,7 @@ qe6502_tick_t qe6502_restart(qe6502_t *cpu)
     cpu->X = 0xc0u;
     cpu->P = qe6502_flag_Z;
     enter_service_slot(cpu, service_slot_reset_0);
-    qe6502_tick_t tick = qe6502_control_store[cpu->microcode](cpu, 0xff);
-    cpu->microcode++;
+    qe6502_tick_t tick = read(cpu, 0x00ff);
     return tick;
 }
 
