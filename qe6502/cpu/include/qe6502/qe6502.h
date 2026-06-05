@@ -134,13 +134,15 @@ enum
 
     qe6502_interrupt_nmi_inv_pin  = (1u << 1),
 
-    qe6502_interrupt_nmi_edge = (1u << 2),
+    qe6502_interrupt_nmi_inv_last_sampled_pin  = (1u << 2),
 
-    qe6502_interrupt_nmi_taken = (1u << 3),
+    qe6502_interrupt_nmi_edge = (1u << 3),
 
-    qe6502_interrupt_irq_inv_pin  = (1u << 4),
+    qe6502_interrupt_nmi_taken = (1u << 4),
 
-    qe6502_interrupt_irq_taken  = (1u << 5),
+    qe6502_interrupt_irq_inv_pin  = (1u << 5),
+
+    qe6502_interrupt_irq_taken  = (1u << 6),
 };
 
 /* Microcode entry. */

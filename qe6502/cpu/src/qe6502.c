@@ -439,6 +439,19 @@ static qe6502_tick_t read_pc_inc(qe6502_t* cpu)
 /* shared_handler; role=kil_jam; action=read_jam_vector_high */
 static qe6502_tick_t interrupt_manager(qe6502_t* cpu, uint8_t bus)
 {
+    if (flag(cpu->interrupts, qe6502_interrupt_nmi_inv_pin) != 0)
+    {
+        if (flag(cpu->interrupts, qe6502_interrupt_nmi_inv_last_sampled_pin) == 0)
+        {
+            cpu->interrupts = flag_on(cpu->interrupts, qe6502_interrupt_nmi_edge);
+        }
+        cpu->interrupts = flag_on(cpu->interrupts, qe6502_interrupt_nmi_inv_last_sampled_pin);
+    }
+    else
+    {
+        cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_inv_last_sampled_pin);
+    }
+
     qe6502_tick_t tick = qe6502_control_store[cpu->microcode](cpu, bus);
     cpu->microcode++;
 
@@ -2837,13 +2850,14 @@ void qe6502_nmi_assert(qe6502_t *cpu, uint8_t assert_nmi)
     {
         if (flag(cpu->interrupts, qe6502_interrupt_nmi_inv_pin) == 0)
         {
-            cpu->interrupts = flag_on(cpu->interrupts, qe6502_interrupt_nmi_inv_pin|qe6502_interrupt_nmi_edge);
+            cpu->interrupts = flag_on(cpu->interrupts, qe6502_interrupt_nmi_inv_pin);
             cpu->hijack_microcode = flag_on(cpu->hijack_microcode, 1);
         }
     }
-    else
+    else if (flag(cpu->interrupts, qe6502_interrupt_nmi_inv_pin) != 0)
     {
         cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_inv_pin);
+        cpu->hijack_microcode = flag_on(cpu->hijack_microcode, 1);
     }
 }
 

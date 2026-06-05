@@ -4,7 +4,9 @@
 #include <charconv>
 #include <cctype>
 #include <iomanip>
+#include <chrono>
 #include <optional>
+#include <random>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -93,6 +95,29 @@ std::uint16_t parse_number(std::string_view text, unsigned max_value, const char
     return static_cast<std::uint16_t>(value);
 }
 
+std::uint32_t parse_seed_number(std::string_view text, const char* what)
+{
+    int base = 10;
+    if (text.size() > 2u && text[0] == '0' && (text[1] == 'x' || text[1] == 'X')) {
+        text.remove_prefix(2u);
+        base = 16;
+    }
+    if (text.empty()) {
+        throw std::runtime_error(std::string(what) + " is empty");
+    }
+
+    std::uint32_t value = 0;
+    const auto* first = text.data();
+    const auto* last = first + text.size();
+    const auto result = std::from_chars(first, last, value, base);
+    if (result.ec != std::errc{} || result.ptr != last) {
+        std::ostringstream out;
+        out << what << " is invalid or out of range: " << std::string(text);
+        throw std::runtime_error(out.str());
+    }
+    return value;
+}
+
 std::optional<std::pair<std::uint16_t, std::uint8_t>> parse_memory_write_command(std::string_view command)
 {
     if (command.size() <= 2u || command[0] != '0' || (command[1] != 'x' && command[1] != 'X')) {
@@ -133,6 +158,40 @@ memory_fill_args parse_memory_fill_args(std::string_view text, const char* comma
         throw std::runtime_error("memory_fill first address must be <= last address");
     }
     return args;
+}
+
+struct memory_random_args {
+    std::uint16_t first = 0;
+    std::uint16_t last = 0;
+    std::uint32_t seed = 0;
+    bool has_seed = false;
+};
+
+memory_random_args parse_memory_random_args(std::string_view text, const char* command_name)
+{
+    const std::vector<std::string> words = split_words(text);
+    if (words.size() != 2u && words.size() != 3u) {
+        throw std::runtime_error(std::string(command_name) + " usage: " + command_name + " 0xFIRST 0xLAST [SEED]");
+    }
+
+    memory_random_args args;
+    args.first = parse_number(words[0], 0xFFFFu, "memory_random first address");
+    args.last = parse_number(words[1], 0xFFFFu, "memory_random last address");
+    if (args.first > args.last) {
+        throw std::runtime_error("memory_random first address must be <= last address");
+    }
+    if (words.size() == 3u) {
+        args.seed = parse_seed_number(words[2], "memory_random seed");
+        args.has_seed = true;
+    }
+    return args;
+}
+
+std::uint32_t time_seed()
+{
+    const auto now = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    const auto seed = static_cast<std::uint64_t>(now);
+    return static_cast<std::uint32_t>(seed ^ (seed >> 32u));
 }
 
 struct bootstrap_options {
@@ -251,6 +310,14 @@ std::string DebugTerminal::execute_command(std::string_view command_text)
         const memory_fill_args args = parse_memory_fill_args(std::string_view(command).substr(12u), "fill_memory");
         return memory_fill(args.first, args.last, args.value);
     }
+    if (starts_with(command, "memory_random ")) {
+        const memory_random_args args = parse_memory_random_args(std::string_view(command).substr(14u), "memory_random");
+        return memory_random(args.first, args.last, args.has_seed ? args.seed : time_seed());
+    }
+    if (starts_with(command, "random_memory ")) {
+        const memory_random_args args = parse_memory_random_args(std::string_view(command).substr(14u), "random_memory");
+        return memory_random(args.first, args.last, args.has_seed ? args.seed : time_seed());
+    }
     if (starts_with(command, "bootstrap")) {
         if (command.size() == std::string_view("bootstrap").size()) {
             return bootstrap({});
@@ -283,6 +350,10 @@ std::string DebugTerminal::help() const
         << "                             Fill inclusive memory range with BYTE. Can be repeated for regions.\n"
         << "fill_memory 0xFIRST 0xLAST BYTE\n"
         << "                             Alias for memory_fill.\n"
+        << "memory_random 0xFIRST 0xLAST [SEED]\n"
+        << "                             Randomize inclusive memory range. SEED is optional and reproducible.\n"
+        << "random_memory 0xFIRST 0xLAST [SEED]\n"
+        << "                             Alias for memory_random.\n"
         << "bootstrap start_at=0xADDR [a=BYTE x=BYTE y=BYTE p=BYTE s=BYTE reset_vector=0xADDR brk_irq_vector=0xADDR nmi_vector=0xADDR]\n"
         << "                             Write asm6502 bootstrap bytes once; does not remember/replay them.\n"
         << "0xADDR=0xBYTE                Write one byte to current backend memory.\n"
@@ -342,6 +413,26 @@ std::string DebugTerminal::memory_fill(std::uint16_t first, std::uint16_t last, 
     out << "memory filled " << hex16(first) << ".." << hex16(last)
         << " value=" << hex8(value)
         << " bytes=" << (static_cast<unsigned>(last) - static_cast<unsigned>(first) + 1u)
+        << "\n";
+    return out.str();
+}
+
+std::string DebugTerminal::memory_random(std::uint16_t first, std::uint16_t last, std::uint32_t seed)
+{
+    if (!has_backend()) {
+        return require_backend_message();
+    }
+
+    std::mt19937 rng(seed);
+    std::uint8_t* mem = cpu_->memory();
+    for (unsigned address = first; address <= last; ++address) {
+        mem[address] = static_cast<std::uint8_t>(rng() & 0xFFu);
+    }
+
+    std::ostringstream out;
+    out << "memory randomized " << hex16(first) << ".." << hex16(last)
+        << " seed=0x" << std::uppercase << std::hex << std::setw(8) << std::setfill('0') << seed
+        << std::dec << " bytes=" << (static_cast<unsigned>(last) - static_cast<unsigned>(first) + 1u)
         << "\n";
     return out.str();
 }

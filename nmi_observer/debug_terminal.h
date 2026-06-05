@@ -33,6 +33,7 @@ public:
 
     std::string memory_clear(std::uint8_t value = 0x00u);
     std::string memory_fill(std::uint16_t first, std::uint16_t last, std::uint8_t value);
+    std::string memory_random(std::uint16_t first, std::uint16_t last, std::uint32_t seed);
     std::string set_memory_byte(std::uint16_t address, std::uint8_t value);
     std::string load_program(std::string name, const std::vector<asm6502::mem_value>& program);
     std::string bootstrap(std::string_view options);
