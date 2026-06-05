@@ -36,11 +36,12 @@ typedef enum service_slot
 {
     service_slot_microcode_hijacked = 256,
     service_slot_illegal_ext = 257,
-    service_slot_reset_0 = 258,
-    service_slot_reset_1 = 259,
-    service_slot_goto = 260,
-    service_slot_nmi = 261,
-    service_slot_irq = 262,
+    service_slot_internal_reset = 258,
+    service_slot_reset_0 = 259,
+    service_slot_reset_1 = 260,
+    service_slot_goto = 261,
+    service_slot_nmi = 262,
+    service_slot_irq = 263,
 
     service_slot_count_used
 } service_slot_t;
@@ -405,12 +406,12 @@ static inline void sbc_decimal_cmos(qe6502_t* cpu, uint8_t value)
     cpu->A = result;
 }
 
-
-static qe6502_tick_t read_pc_inc(qe6502_t* cpu)
+static inline uint16_t calculate_reset_pc(uint16_t pc, uint8_t bus)
 {
-    qe6502_tick_t tick = read(cpu, cpu->PC);
-    cpu->PC++;
-    return tick;
+    uint8_t old_high = (uint8_t)(pc >> 8);
+    uint8_t new_low  = (uint8_t)(old_high - 1);
+    uint8_t new_high = bus;
+    return (uint16_t)(((uint16_t)new_high << 8) | new_low);
 }
 
 static inline uint8_t flag(uint8_t flags, uint8_t mask)
@@ -426,6 +427,13 @@ static inline uint8_t flag_on(uint8_t flags, uint8_t mask)
 static inline uint8_t flag_off(uint8_t flags, uint8_t mask)
 {
     return (uint8_t)(flags & (~mask));
+}
+
+static qe6502_tick_t read_pc_inc(qe6502_t* cpu)
+{
+    qe6502_tick_t tick = read(cpu, cpu->PC);
+    cpu->PC++;
+    return tick;
 }
 
 /* shared_handler; role=kil_jam; action=read_jam_vector_high */
@@ -604,18 +612,40 @@ static qe6502_tick_t mc_stack_pull_read(qe6502_t* cpu, uint8_t bus)
     return stack_read(cpu);
 }
 
+static qe6502_tick_t mc_internal_reset_c0(qe6502_t* cpu, uint8_t bus)
+{
+    cpu->latch_data++;
+    cpu->PC = (uint16_t)(bus << 8);
+    qe6502_tick_t tick = read(cpu, cpu->PC);
+    tick.status = flag_on(tick.status, qe6502_status_internal_reset);
+    return tick;
+}
+
+static qe6502_tick_t mc_internal_reset_c1(qe6502_t* cpu, uint8_t bus)
+{
+    cpu->latch_data++;
+    cpu->PC = calculate_reset_pc(cpu->PC, bus);
+    if (cpu->latch_data == 8)
+    {
+        next_enter_service_slot(cpu, service_slot_reset_0);
+        return read(cpu, cpu->PC);
+    }
+    // else
+    loop_here(cpu);
+    qe6502_tick_t tick = read(cpu, cpu->PC);
+    tick.status = flag_on(tick.status, qe6502_status_internal_reset);
+    return tick;
+}
+
 static qe6502_tick_t mc_restart_read_hhff(qe6502_t* cpu, uint8_t bus)
 {
-    cpu->PC = (uint16_t)((bus << 8) | 0xff);
+    cpu->PC = calculate_reset_pc(cpu->PC, bus);
     return read(cpu, cpu->PC);
 }
 
 static qe6502_tick_t mc_restart_read_zzhh_fetch(qe6502_t* cpu, uint8_t bus)
 {
-    cpu->PC = (uint16_t)(cpu->PC >> 8);
-    cpu->PC--;
-    cpu->PC = (uint16_t)(cpu->PC & 0xff);
-    cpu->PC = (uint16_t)((bus << 8) | cpu->PC);
+    cpu->PC = calculate_reset_pc(cpu->PC, bus);
     return fetch(cpu);
 }
 
@@ -2847,12 +2877,15 @@ qe6502_tick_t qe6502_restart(qe6502_t *cpu)
 
     *cpu = (qe6502_t){0};
     cpu->model = model;
-    cpu->PC = 0xeae9u;
+    cpu->PC = 0x00ff;
     cpu->S = 0xc0u;
     cpu->X = 0xc0u;
     cpu->P = qe6502_flag_Z;
-    enter_service_slot(cpu, service_slot_reset_0);
-    qe6502_tick_t tick = read(cpu, 0x00ff);
+    enter_service_slot(cpu, service_slot_internal_reset);
+
+    cpu->latch_data = 1;
+    qe6502_tick_t tick = read(cpu, cpu->PC);
+    tick.status = flag_on(tick.status, qe6502_status_internal_reset);
     return tick;
 }
 
