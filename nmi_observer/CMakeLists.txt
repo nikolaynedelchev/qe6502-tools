@@ -43,3 +43,81 @@ target_link_libraries(cpu6502_interrupt_observer
 
 qe6502_configure_warnings(cpu6502_interrupt_observer)
 target_compile_features(cpu6502_interrupt_observer PUBLIC cxx_std_20)
+
+add_library(nmi_observer_scripted_testcase_runner STATIC
+    testaces.cpp
+    test_debugger.cpp
+    test_debugger.h
+    scripted_testcase_runner.cpp
+    scripted_testcase_runner.h
+    debug_terminal.cpp
+    debug_terminal.h
+)
+
+target_link_libraries(nmi_observer_scripted_testcase_runner
+    PUBLIC
+        cpu6502_bridge::cpu6502_bridge
+        asm6502::asm6502
+)
+
+target_include_directories(nmi_observer_scripted_testcase_runner
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+qe6502_configure_warnings(nmi_observer_scripted_testcase_runner)
+target_compile_features(nmi_observer_scripted_testcase_runner PUBLIC cxx_std_20)
+
+add_executable(nmi_observer_scripted_testcase_runner_smoke
+    scripted_testcase_runner_smoke.cpp
+)
+
+target_link_libraries(nmi_observer_scripted_testcase_runner_smoke
+    PRIVATE
+        nmi_observer_scripted_testcase_runner
+        asm6502::asm6502
+)
+
+qe6502_configure_warnings(nmi_observer_scripted_testcase_runner_smoke)
+target_compile_features(nmi_observer_scripted_testcase_runner_smoke PUBLIC cxx_std_20)
+
+add_test(NAME nmi_observer_scripted_testcase_runner_smoke COMMAND nmi_observer_scripted_testcase_runner_smoke)
+
+
+add_executable(nmi_observer_debug_terminal_smoke
+    debug_terminal_smoke.cpp
+)
+
+target_link_libraries(nmi_observer_debug_terminal_smoke
+    PRIVATE
+        nmi_observer_scripted_testcase_runner
+        asm6502::asm6502
+)
+
+qe6502_configure_warnings(nmi_observer_debug_terminal_smoke)
+target_compile_features(nmi_observer_debug_terminal_smoke PUBLIC cxx_std_20)
+
+add_test(NAME nmi_observer_debug_terminal_smoke COMMAND nmi_observer_debug_terminal_smoke)
+
+add_executable(nmi_observer_debug_console
+    debug_console.cpp
+)
+
+target_link_libraries(nmi_observer_debug_console
+    PRIVATE
+        nmi_observer_scripted_testcase_runner
+        asm6502::asm6502
+)
+
+qe6502_configure_warnings(nmi_observer_debug_console)
+target_compile_features(nmi_observer_debug_console PUBLIC cxx_std_20)
+
+add_test(NAME nmi_observer_debug_console_smoke
+    COMMAND nmi_observer_debug_console
+        --no-banner
+        --backend qe6502
+        --source ${CMAKE_CURRENT_SOURCE_DIR}/debug_console_smoke_script.txt
+        --command terminal_help
+        --exit-after-source
+)
+

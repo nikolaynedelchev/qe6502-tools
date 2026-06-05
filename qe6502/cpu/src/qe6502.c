@@ -453,17 +453,15 @@ static qe6502_tick_t interrupt_manager(qe6502_t* cpu, uint8_t bus)
         {
             cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_taken);
             cpu->microcode = SERVICE_SLOT_IDX(cpu->model, service_slot_nmi, 0u);
-            qe6502_tick_t nmi_tick = read(cpu, cpu->PC);
-            nmi_tick.status = flag_on(nmi_tick.status, qe6502_status_nmi_ack);
-            return nmi_tick;
+            tick.status = flag_on(tick.status, qe6502_status_nmi_ack);
+            return tick;
         }
         else if(flag(cpu->interrupts, qe6502_interrupt_irq_taken) != 0u)
         {
             cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_irq_taken);
             cpu->microcode = SERVICE_SLOT_IDX(cpu->model, service_slot_irq, 0u);
-            qe6502_tick_t irq_tick = read(cpu, cpu->PC);
-            irq_tick.status = flag_on(irq_tick.status, qe6502_status_irq_ack);
-            return irq_tick;
+            tick.status = flag_on(tick.status, qe6502_status_irq_ack);
+            return tick;
         }
     }
 

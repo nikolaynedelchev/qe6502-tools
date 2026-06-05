@@ -1,0 +1,17 @@
+# Smoke script for nmi_observer_debug_console.
+app_help
+list_opcodes
+tests_0x50
+tests_details_0x50_0
+load_test_0x50_0
+restart_to_test
+cycle_details
+log_registers_on
+log_bus_state_on
+step_2
+log_registers_off
+log_bus_state_off
+load_program_inline tiny 0xfffc=0x00 0xfffd=0x80 0x8000=0xea
+restart_to_test
+step
+cycle_details
