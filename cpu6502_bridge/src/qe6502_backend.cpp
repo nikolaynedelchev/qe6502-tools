@@ -18,7 +18,8 @@ public:
 
     void restart() noexcept override
     {
-        tick_ = qe6502_restart(&cpu_);
+        should_restart_ = true;
+        tick_ = {};
     }
 
 
@@ -51,6 +52,12 @@ public:
 
     void step() noexcept override
     {
+        if (should_restart_) {
+            tick_ = qe6502_restart(&cpu_);
+            should_restart_ = false;
+            return;
+        }
+
         const std::uint16_t address = tick_.address;
         const std::uint8_t input = memory_[address];
 
@@ -83,6 +90,7 @@ public:
 private:
     qe6502_t cpu_{};
     qe6502_tick_t tick_{};
+    bool should_restart_ = true;
     std::array<std::uint8_t, 65536> memory_{};
 };
 

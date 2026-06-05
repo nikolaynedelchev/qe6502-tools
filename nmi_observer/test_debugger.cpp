@@ -261,6 +261,10 @@ std::string TestDebugger::execute_command(std::string_view command_text)
         return cycle_details_off();
     }
 
+    if (command == "run_to_next_fetch") {
+        return run_to_next_fetch();
+    }
+
     if (const std::optional<std::uint16_t> address = parse_run_to_address(command)) {
         return run_to(*address);
     }
@@ -278,6 +282,7 @@ std::string TestDebugger::help() const
         "step                         Execute one bus cycle.\n"
         "step_N                       Execute N bus cycles, e.g. step_10. Per-step logs still run each cycle.\n"
         "run_to_0xabcd                Run until opcode fetch at address 0xabcd.\n"
+        "run_to_next_fetch            Run until the next opcode fetch after at least one step.\n"
         "irq_assert / irq_deassert    Set or clear IRQ line.\n"
         "nmi_assert / nmi_deassert    Set or clear NMI line.\n"
         "log_registers                Print CPU registers and IRQ/NMI line state.\n"
@@ -364,6 +369,39 @@ std::string TestDebugger::run_to(std::uint16_t address, unsigned max_steps)
 
     std::ostringstream out;
     out << "run_to address=" << hex16(address)
+        << " steps=" << max_steps
+        << " reached=no"
+        << " cycle=" << cycle_
+        << " current_address=" << hex16(cpu().bus_address())
+        << " current_data=" << hex8(cpu().bus_data())
+        << "\n";
+    return out_after_steps.str() + out.str();
+}
+
+
+std::string TestDebugger::run_to_next_fetch(unsigned max_steps)
+{
+    std::ostringstream out_after_steps;
+    for (unsigned steps = 1; steps <= max_steps; ++steps) {
+        cpu().step();
+        ++cycle_;
+        out_after_steps << after_step_logs();
+
+        if (cpu().is_opcode_fetch() && !cpu().is_write()) {
+            std::ostringstream out;
+            out << "run_to_next_fetch"
+                << " steps=" << steps
+                << " reached=yes"
+                << " cycle=" << cycle_
+                << " address=" << hex16(cpu().bus_address())
+                << " data=" << hex8(cpu().bus_data())
+                << "\n";
+            return out_after_steps.str() + out.str();
+        }
+    }
+
+    std::ostringstream out;
+    out << "run_to_next_fetch"
         << " steps=" << max_steps
         << " reached=no"
         << " cycle=" << cycle_

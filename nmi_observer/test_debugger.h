@@ -24,6 +24,7 @@ public:
     std::string step();
     std::string step(unsigned count);
     std::string run_to(std::uint16_t address, unsigned max_steps = default_run_to_cycle_limit);
+    std::string run_to_next_fetch(unsigned max_steps = default_run_to_cycle_limit);
 
     std::string irq_assert();
     std::string irq_deassert();

@@ -50,6 +50,7 @@ int main()
     const std::string help = debugger.help();
     if (!contains(help, "restart_to_start_fetch")
         || !contains(help, "step_N")
+        || !contains(help, "run_to_next_fetch")
         || contains(help, "restart_to_test")) {
         std::cerr << "TestDebugger help has unexpected/missing markers\n" << help;
         return EXIT_FAILURE;
@@ -59,6 +60,7 @@ int main()
     log += debugger.restart_to_start_fetch();
     log += debugger.execute_command("run_to_0x8000");
     log += debugger.execute_command("cycle_details");
+    log += debugger.execute_command("run_to_next_fetch");
     log += debugger.execute_command("log_registers_on");
     log += debugger.execute_command("log_bus_state_on");
     log += debugger.execute_command("step_2");
@@ -74,6 +76,7 @@ int main()
         && contains(log, "run_to address=$8000")
         && contains(log, "reached=yes")
         && contains(log, "cycle_details")
+        && contains(log, "run_to_next_fetch")
         && contains(log, "registers PC=$8000 A=$11 X=$22 Y=$33 S=$F8")
         && contains(log, "log_registers=on")
         && contains(log, "log_bus_state=on")

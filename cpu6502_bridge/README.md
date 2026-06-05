@@ -31,10 +31,11 @@ backend, read cycles consume bytes from the backend's private 64 KiB memory and
 write cycles store into that memory. `set_bus_data()` remains available as a
 compatibility helper and patches the current read address.
 
-For the `perfect6502` backend, `step()` internally executes two netlist
-half-steps: the memory/bus half-step and the CPU half-step. Opcode fetch
-detection uses the netlist `SYNC` node (node 539) while the adapter is
-normalized to the memory-half phase.
+For the `perfect6502` backend, `step()` reports a cached complete-cycle
+snapshot. It first runs to a completed CPU half-step and samples the request
+address, R/W direction, SYNC/opcode-fetch state, and registers. It then runs
+the corresponding memory/bus half-step and samples the data bus. Public getters
+return that cached snapshot rather than reading the live netlist phase.
 
 The `perfect6502` adapter uses the upstream global `memory[65536]` storage, so
 multiple concurrent perfect6502 instances are intentionally not supported as

@@ -36,6 +36,7 @@ int main()
         || !contains(help, "log_mem_0x0400_to_0x04ff")
         || !contains(help, "cycle_details_on/off")
         || !contains(help, "step_N")
+        || !contains(help, "run_to_next_fetch")
         || contains(help, "restart_to_test")
         || contains(help, "reload")
         || contains(help, "list_opcodes")) {
@@ -62,6 +63,7 @@ int main()
     log += terminal.execute_command("restart_to_start_fetch");
     log += terminal.execute_command("run_to_0x0400");
     log += terminal.execute_command("cycle_details");
+    log += terminal.execute_command("run_to_next_fetch");
     log += terminal.execute_command("cycle_details_on");
     log += terminal.execute_command("step_2");
     log += terminal.execute_command("cycle_details_off");
@@ -75,6 +77,7 @@ int main()
         || !contains(log, "mem $0401=$EA")
         || !contains(log, "restart_to_start_fetch")
         || !contains(log, "run_to address=$0400")
+        || !contains(log, "run_to_next_fetch")
         || !contains(log, "reached=yes")
         || !contains(log, "registers PC=$0400 A=$12 X=$45 Y=$10 S=$FD")
         || !contains(log, "cycle_details=on")

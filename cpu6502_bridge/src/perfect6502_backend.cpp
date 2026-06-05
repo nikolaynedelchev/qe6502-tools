@@ -51,7 +51,7 @@ public:
         state_ = initAndResetChip();
         irq_asserted_ = false;
         nmi_asserted_ = false;
-        normalize_to_memory_half();
+        clear_snapshot();
     }
 
 
@@ -85,8 +85,9 @@ public:
 
     void set_bus_data(std::uint8_t data) noexcept override
     {
-        if (!is_write()) {
-            ::memory[bus_address()] = data;
+        if (!snapshot_.write) {
+            ::memory[snapshot_.address] = data;
+            snapshot_.data = data;
         }
     }
 
@@ -96,25 +97,20 @@ public:
             return;
         }
 
-        normalize_to_memory_half();
-
-        step_one_half(); /* memory/bus half-step */
-        step_one_half(); /* CPU half-step; leaves the next request visible */
-        normalize_to_memory_half();
+        step_until_cpu_half_completed();
+        capture_request_snapshot_after_cpu_half();
+        step_one_half(); /* memory/bus half-step; services the visible bus request */
+        capture_bus_data_after_memory_half();
     }
 
     std::uint16_t bus_address() const noexcept override
     {
-        return state_ != nullptr ? readAddressBus(state_) : 0;
+        return snapshot_.address;
     }
 
     std::uint8_t bus_data() const noexcept override
     {
-        if (state_ == nullptr) {
-            return 0;
-        }
-
-        return is_write() ? readDataBus(state_) : ::memory[bus_address()];
+        return snapshot_.data;
     }
 
     std::uint8_t* memory() noexcept override
@@ -124,38 +120,79 @@ public:
 
     bool is_write() const noexcept override
     {
-        return state_ != nullptr && readRW(state_) == 0u;
+        return snapshot_.write;
     }
 
     bool is_opcode_fetch() const noexcept override
     {
-        return state_ != nullptr
-            && next_step_is_memory_half(state_)
-            && !is_write()
-            && isNodeHigh(state_, perfect_sync) != 0;
+        return snapshot_.opcode_fetch;
     }
 
-    std::uint16_t pc() const noexcept override { return state_ != nullptr ? readPC(state_) : 0; }
-    std::uint8_t s() const noexcept override { return state_ != nullptr ? readSP(state_) : 0; }
-    std::uint8_t a() const noexcept override { return state_ != nullptr ? readA(state_) : 0; }
-    std::uint8_t x() const noexcept override { return state_ != nullptr ? readX(state_) : 0; }
-    std::uint8_t y() const noexcept override { return state_ != nullptr ? readY(state_) : 0; }
-    std::uint8_t p() const noexcept override { return state_ != nullptr ? readP(state_) : 0; }
+    std::uint16_t pc() const noexcept override { return snapshot_.pc; }
+    std::uint8_t s() const noexcept override { return snapshot_.s; }
+    std::uint8_t a() const noexcept override { return snapshot_.a; }
+    std::uint8_t x() const noexcept override { return snapshot_.x; }
+    std::uint8_t y() const noexcept override { return snapshot_.y; }
+    std::uint8_t p() const noexcept override { return snapshot_.p; }
 
 private:
+    struct Snapshot {
+        std::uint16_t address = 0;
+        std::uint8_t data = 0;
+        bool write = false;
+        bool opcode_fetch = false;
+        std::uint16_t pc = 0;
+        std::uint8_t s = 0;
+        std::uint8_t a = 0;
+        std::uint8_t x = 0;
+        std::uint8_t y = 0;
+        std::uint8_t p = 0;
+    };
+
     void step_one_half() noexcept
     {
         ::step(state_);
     }
 
-    void normalize_to_memory_half() noexcept
+    bool step_one_half_and_report_cpu_half() noexcept
     {
-        if (state_ != nullptr && !next_step_is_memory_half(state_)) {
-            step_one_half();
+        const bool cpu_half = !next_step_is_memory_half(state_);
+        step_one_half();
+        return cpu_half;
+    }
+
+    void step_until_cpu_half_completed() noexcept
+    {
+        while (!step_one_half_and_report_cpu_half()) {
         }
     }
 
+    void capture_request_snapshot_after_cpu_half() noexcept
+    {
+        snapshot_.address = readAddressBus(state_);
+        snapshot_.write = readRW(state_) == 0u;
+        snapshot_.opcode_fetch = !snapshot_.write && isNodeHigh(state_, perfect_sync) != 0;
+        snapshot_.pc = readPC(state_);
+        snapshot_.s = readSP(state_);
+        snapshot_.a = readA(state_);
+        snapshot_.x = readX(state_);
+        snapshot_.y = readY(state_);
+        snapshot_.p = readP(state_);
+        snapshot_.data = 0;
+    }
+
+    void capture_bus_data_after_memory_half() noexcept
+    {
+        snapshot_.data = readDataBus(state_);
+    }
+
+    void clear_snapshot() noexcept
+    {
+        snapshot_ = Snapshot{};
+    }
+
     state_t* state_ = nullptr;
+    Snapshot snapshot_{};
     bool irq_asserted_ = false;
     bool nmi_asserted_ = false;
 };
