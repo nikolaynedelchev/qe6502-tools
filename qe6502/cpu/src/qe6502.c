@@ -1216,9 +1216,9 @@ static inline qe6502_tick_t branch_c0_offset(qe6502_t* cpu, bool taken)
 {
     qe6502_tick_t tick = read_pc_inc(cpu);
 
+    prefetch(cpu);
     if (!taken)
     {
-        prefetch(cpu);
         cpu->microcode = (uint16_t)(cpu->microcode + 2u);
     }
 

@@ -4,6 +4,29 @@
 
 namespace cpu6502_bridge {
 
+unsigned ICpu::restart_to_start_fetch(
+    unsigned max_steps)
+{
+    const auto* mem = memory();
+    const std::uint16_t start_address =
+        static_cast<std::uint16_t>(mem[0xfffc])
+        | static_cast<std::uint16_t>(mem[0xfffd] << 8);
+
+    restart();
+
+    for (unsigned steps = 0; steps < max_steps; ++steps) {
+        if (is_opcode_fetch()
+            && !is_write()
+            && bus_address() == start_address) {
+            return steps;
+        }
+
+        step();
+    }
+
+    return max_steps;
+}
+
 std::string ICpu::to_string() const
 {
     char buffer[160];

@@ -13,6 +13,11 @@ public:
     virtual ~ICpu() = default;
 
     virtual void restart() noexcept = 0;
+
+    // Performs restart sequencing and stops when the first real opcode fetch
+    // from the reset-vector start address is visible on the bus.
+    virtual unsigned restart_to_start_fetch(unsigned max_steps = 64);
+
     virtual void irq(bool assert_irq) noexcept = 0;
     virtual bool is_irq_asserted() const noexcept = 0;
     virtual void nmi(bool assert_nmi) noexcept = 0;
