@@ -121,6 +121,9 @@ enum
     /* IRQ is acknowledged by the core on this tick. */
     qe6502_status_irq_ack = (1u << 3),
 
+    /* Internal reset procedure ticks. */
+    qe6502_status_internal_reset = (1u << 6),
+
     /* CPU is jammed after a KIL opcode. */
     qe6502_status_cpu_jammed = (1u << 7),
 

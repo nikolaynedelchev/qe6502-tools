@@ -19,6 +19,9 @@ public:
     void restart() noexcept override
     {
         tick_ = qe6502_restart(&cpu_);
+        while(tick_.status & qe6502_status_internal_reset){
+            step();
+        }
     }
 
     void irq(bool assert_irq) noexcept override
