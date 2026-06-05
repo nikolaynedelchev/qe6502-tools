@@ -1,5 +1,5 @@
 #include <cpu6502_bridge/cpu.hpp>
-
+#include <cstring>
 #include <cstdio>
 
 namespace cpu6502_bridge {

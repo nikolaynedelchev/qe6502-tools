@@ -614,6 +614,7 @@ static qe6502_tick_t mc_restart_read_zzhh_fetch(qe6502_t* cpu, uint8_t bus)
 {
     cpu->PC = (uint16_t)(cpu->PC >> 8);
     cpu->PC--;
+    cpu->PC = (uint16_t)(cpu->PC & 0xff);
     cpu->PC = (uint16_t)((bus << 8) | cpu->PC);
     return fetch(cpu);
 }
