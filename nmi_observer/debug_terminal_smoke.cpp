@@ -31,8 +31,10 @@ int main()
     const std::string help = terminal.execute_command("help");
     if (!contains(help, "DebugTerminal commands")
         || !contains(help, "TestDebugger commands")
-        || !contains(help, "memory_clear")
+        || !contains(help, "memory_clear [BYTE]")
+        || !contains(help, "clear_memory [BYTE]")
         || !contains(help, "bootstrap start_at=0xADDR")
+        || !contains(help, "memory_fill 0xFIRST 0xLAST BYTE")
         || !contains(help, "log_mem_0x0400_to_0x04ff")
         || !contains(help, "cycle_details_on/off")
         || !contains(help, "step_N")
@@ -53,7 +55,10 @@ int main()
     std::string log;
     log += terminal.execute_command("backend_qe6502");
     log += terminal.execute_command("status");
-    log += terminal.execute_command("memory_clear");
+    log += terminal.execute_command("memory_clear 0xea");
+    log += terminal.execute_command("clear_memory");
+    log += terminal.execute_command("memory_fill 0x0400 0x0404 0xcc");
+    log += terminal.execute_command("fill_memory 0x0500 0x0502 0xdd");
     log += terminal.execute_command("bootstrap start_at=0x0400 a=0x12 x=0x45 y=0x10 p=0x24 s=0xfd reset_vector=0x0200 brk_irq_vector=0x9100 nmi_vector=0x9000");
     log += terminal.execute_command("0x0400=0xea");
     log += terminal.execute_command("0x0401:0xea");
@@ -71,7 +76,10 @@ int main()
 
     if (!contains(log, "backend=qe6502 memory=cleared")
         || !contains(log, "status backend=qe6502")
-        || !contains(log, "memory cleared")
+        || !contains(log, "memory cleared value=$EA")
+        || !contains(log, "memory cleared value=$00")
+        || !contains(log, "memory filled $0400..$0404 value=$CC bytes=5")
+        || !contains(log, "memory filled $0500..$0502 value=$DD bytes=3")
         || !contains(log, "bootstrap written start_at=$0400")
         || !contains(log, "mem $0400=$EA")
         || !contains(log, "mem $0401=$EA")

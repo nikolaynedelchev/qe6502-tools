@@ -112,6 +112,29 @@ std::optional<std::pair<std::uint16_t, std::uint8_t>> parse_memory_write_command
     return std::make_pair(address, static_cast<std::uint8_t>(value));
 }
 
+struct memory_fill_args {
+    std::uint16_t first = 0;
+    std::uint16_t last = 0;
+    std::uint8_t value = 0;
+};
+
+memory_fill_args parse_memory_fill_args(std::string_view text, const char* command_name)
+{
+    const std::vector<std::string> words = split_words(text);
+    if (words.size() != 3u) {
+        throw std::runtime_error(std::string(command_name) + " usage: " + command_name + " 0xFIRST 0xLAST 0xBYTE");
+    }
+
+    memory_fill_args args;
+    args.first = parse_number(words[0], 0xFFFFu, "memory_fill first address");
+    args.last = parse_number(words[1], 0xFFFFu, "memory_fill last address");
+    args.value = static_cast<std::uint8_t>(parse_number(words[2], 0xFFu, "memory_fill value"));
+    if (args.first > args.last) {
+        throw std::runtime_error("memory_fill first address must be <= last address");
+    }
+    return args;
+}
+
 struct bootstrap_options {
     std::uint8_t a = 0x00u;
     std::uint8_t x = 0x00u;
@@ -209,8 +232,24 @@ std::string DebugTerminal::execute_command(std::string_view command_text)
     if (command == "backend_perfect6502") {
         return use_perfect6502_backend();
     }
-    if (command == "memory_clear") {
+    if (command == "memory_clear" || command == "clear_memory") {
         return memory_clear();
+    }
+    if (starts_with(command, "memory_clear ")) {
+        const std::uint16_t value = parse_number(std::string_view(command).substr(13u), 0xFFu, "memory_clear value");
+        return memory_clear(static_cast<std::uint8_t>(value));
+    }
+    if (starts_with(command, "clear_memory ")) {
+        const std::uint16_t value = parse_number(std::string_view(command).substr(13u), 0xFFu, "clear_memory value");
+        return memory_clear(static_cast<std::uint8_t>(value));
+    }
+    if (starts_with(command, "memory_fill ")) {
+        const memory_fill_args args = parse_memory_fill_args(std::string_view(command).substr(12u), "memory_fill");
+        return memory_fill(args.first, args.last, args.value);
+    }
+    if (starts_with(command, "fill_memory ")) {
+        const memory_fill_args args = parse_memory_fill_args(std::string_view(command).substr(12u), "fill_memory");
+        return memory_fill(args.first, args.last, args.value);
     }
     if (starts_with(command, "bootstrap")) {
         if (command.size() == std::string_view("bootstrap").size()) {
@@ -238,7 +277,12 @@ std::string DebugTerminal::help() const
         << "status                       Show selected backend. No program/test is remembered.\n"
         << "backend_qe6502               Select qe6502; creates fresh CPU and clears memory.\n"
         << "backend_perfect6502          Select perfect6502; creates fresh CPU and clears memory.\n"
-        << "memory_clear                 Fill current backend memory with $00. Requires selected backend.\n"
+        << "memory_clear [BYTE]          Fill current backend memory with BYTE, default $00. Requires selected backend.\n"
+        << "clear_memory [BYTE]          Alias for memory_clear [BYTE].\n"
+        << "memory_fill 0xFIRST 0xLAST BYTE\n"
+        << "                             Fill inclusive memory range with BYTE. Can be repeated for regions.\n"
+        << "fill_memory 0xFIRST 0xLAST BYTE\n"
+        << "                             Alias for memory_fill.\n"
         << "bootstrap start_at=0xADDR [a=BYTE x=BYTE y=BYTE p=BYTE s=BYTE reset_vector=0xADDR brk_irq_vector=0xADDR nmi_vector=0xADDR]\n"
         << "                             Write asm6502 bootstrap bytes once; does not remember/replay them.\n"
         << "0xADDR=0xBYTE                Write one byte to current backend memory.\n"
@@ -271,13 +315,35 @@ std::string DebugTerminal::use_perfect6502_backend()
     return "backend=perfect6502 memory=cleared\n";
 }
 
-std::string DebugTerminal::memory_clear()
+std::string DebugTerminal::memory_clear(std::uint8_t value)
 {
     if (!has_backend()) {
         return require_backend_message();
     }
-    std::fill(cpu_->memory(), cpu_->memory() + 65536u, 0x00u);
-    return "memory cleared\n";
+    cpu_->clear_memory(value);
+
+    std::ostringstream out;
+    out << "memory cleared value=" << hex8(value) << "\n";
+    return out.str();
+}
+
+std::string DebugTerminal::memory_fill(std::uint16_t first, std::uint16_t last, std::uint8_t value)
+{
+    if (!has_backend()) {
+        return require_backend_message();
+    }
+
+    std::uint8_t* mem = cpu_->memory();
+    for (unsigned address = first; address <= last; ++address) {
+        mem[address] = value;
+    }
+
+    std::ostringstream out;
+    out << "memory filled " << hex16(first) << ".." << hex16(last)
+        << " value=" << hex8(value)
+        << " bytes=" << (static_cast<unsigned>(last) - static_cast<unsigned>(first) + 1u)
+        << "\n";
+    return out.str();
 }
 
 std::string DebugTerminal::set_memory_byte(std::uint16_t address, std::uint8_t value)
