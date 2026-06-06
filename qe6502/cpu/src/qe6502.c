@@ -892,7 +892,9 @@ static inline void cmos_interrupt_vector_low(qe6502_t* cpu, uint8_t bus)
 static inline qe6502_tick_t mc_nmi_c3_push_p(qe6502_t* cpu, uint8_t bus)
 {
     (void)bus;
+
     cpu->interrupts = flag_on(cpu->interrupts, qe6502_interrupt_sampling_off);
+    cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_edge);
     cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_taken);
     cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_irq_taken);
     return stack_write(cpu, stack_status(cpu->P, 0u));
