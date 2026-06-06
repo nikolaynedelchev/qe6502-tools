@@ -180,7 +180,7 @@ qe6502_tick_t qe6502_tick(qe6502_t *cpu, uint8_t bus)
 {
     if( cpu->hijack_microcode != 0 )
     {
-        return qe6502_control_store[QE6502_SERVICE_SLOT_IDX(cpu->model, 0x100, cpu->hijack_microcode)](cpu, bus);
+        return qe6502_control_store[QE6502_SERVICE_SLOT_IDX(0, 0x100, 0)](cpu, bus);
     }
 
     qe6502_tick_t tick = qe6502_control_store[cpu->microcode](cpu, bus);

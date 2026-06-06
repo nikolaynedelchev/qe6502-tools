@@ -2,7 +2,7 @@
 
         /* Rockwell service slots. */
 
-        [SERVICE_SLOT_IDX(qe6502_model_rw, service_slot_microcode_hijacked, 1)] = &interrupt_resolver,
+        [SERVICE_SLOT_IDX(qe6502_model_rw, service_slot_microcode_hijacked, 0)] = &interrupt_resolver,
 
         [SERVICE_SLOT_IDX(qe6502_model_rw, service_slot_illegal_ext, 0)] = &mc_dispatch,
 
@@ -26,7 +26,7 @@
         [SERVICE_SLOT_IDX(qe6502_model_rw, service_slot_nmi, 0)] = &mc_read_pc,
         [SERVICE_SLOT_IDX(qe6502_model_rw, service_slot_nmi, 1)] = &mc_stack_push_pc_high,
         [SERVICE_SLOT_IDX(qe6502_model_rw, service_slot_nmi, 2)] = &mc_stack_push_pc_low,
-        [SERVICE_SLOT_IDX(qe6502_model_rw, service_slot_nmi, 3)] = &mc_interrupt_c3_push_p,
+        [SERVICE_SLOT_IDX(qe6502_model_rw, service_slot_nmi, 3)] = &mc_cmos_interrupt_c3_push_p,
         [SERVICE_SLOT_IDX(qe6502_model_rw, service_slot_nmi, 4)] = &mc_nmi_c4_vec_lo,
         [SERVICE_SLOT_IDX(qe6502_model_rw, service_slot_nmi, 5)] = &mc_cmos_nmi_c5_vec_hi,
         [SERVICE_SLOT_IDX(qe6502_model_rw, service_slot_nmi, 6)] = &mc_latch_pch_interrupt_fetch,
@@ -35,7 +35,7 @@
         [SERVICE_SLOT_IDX(qe6502_model_rw, service_slot_irq, 0)] = &mc_read_pc,
         [SERVICE_SLOT_IDX(qe6502_model_rw, service_slot_irq, 1)] = &mc_stack_push_pc_high,
         [SERVICE_SLOT_IDX(qe6502_model_rw, service_slot_irq, 2)] = &mc_stack_push_pc_low,
-        [SERVICE_SLOT_IDX(qe6502_model_rw, service_slot_irq, 3)] = &mc_interrupt_c3_push_p,
+        [SERVICE_SLOT_IDX(qe6502_model_rw, service_slot_irq, 3)] = &mc_cmos_interrupt_c3_push_p,
         [SERVICE_SLOT_IDX(qe6502_model_rw, service_slot_irq, 4)] = &mc_irq_c4_vec_lo,
         [SERVICE_SLOT_IDX(qe6502_model_rw, service_slot_irq, 5)] = &mc_cmos_irq_c5_vec_hi,
         [SERVICE_SLOT_IDX(qe6502_model_rw, service_slot_irq, 6)] = &mc_latch_pch_interrupt_fetch,
@@ -47,7 +47,7 @@
         [IDX(qe6502_model_rw, 0x00, 0)] = &mc_read_pc_inc,
         [IDX(qe6502_model_rw, 0x00, 1)] = &mc_stack_push_pc_high,
         [IDX(qe6502_model_rw, 0x00, 2)] = &mc_stack_push_pc_low,
-        [IDX(qe6502_model_rw, 0x00, 3)] = &mc_stack_push_status_b,
+        [IDX(qe6502_model_rw, 0x00, 3)] = &mc_cmos_stack_push_status_b,
         [IDX(qe6502_model_rw, 0x00, 4)] = &mc_read_fffe,
         [IDX(qe6502_model_rw, 0x00, 5)] = &mc_cmos_brk_c5_vec_hi,
         [IDX(qe6502_model_rw, 0x00, 6)] = &mc_latch_pch_interrupt_fetch,

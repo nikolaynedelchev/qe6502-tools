@@ -807,14 +807,25 @@ static qe6502_tick_t mc_stack_push_status_b(qe6502_t* cpu, uint8_t bus)
     return tick;
 }
 
+/* common_handler; role=push_status_b; action=push_status_with_break_flag_to_stack */
+static qe6502_tick_t mc_cmos_stack_push_status_b(qe6502_t* cpu, uint8_t bus)
+{
+    (void)bus;
+
+    return stack_write(cpu, stack_status(cpu->P, flag_B));
+}
+
 /* special_handler; role=vec_hi; action=read_brk_vector_high_to_pc_high_and_set_interrupt_disable */
 static qe6502_tick_t mc_brk_c5_vec_hi(qe6502_t* cpu, uint8_t bus)
 {
     cpu->PC = u16_set_byte(cpu->PC, 0, bus);
     cpu->P = (uint8_t)(cpu->P | flag_I);
 
-    cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_edge);
-    update_nmi_last_sampled(cpu);
+    if (flag(cpu->interrupts, qe6502_interrupt_nmi_inv_pin) == 0)
+    {
+        cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_edge);
+        update_nmi_last_sampled(cpu);
+    }
 
     return read(cpu, 0xffffu);
 }
@@ -867,6 +878,14 @@ static inline qe6502_tick_t mc_interrupt_c3_push_p(qe6502_t* cpu, uint8_t bus)
     return tick;
 }
 
+/* interrupt_handler; role=push_p; action=push_hardware_interrupt_status_to_stack */
+static inline qe6502_tick_t mc_cmos_interrupt_c3_push_p(qe6502_t* cpu, uint8_t bus)
+{
+    (void)bus;
+
+    return stack_write(cpu, stack_status(cpu->P, 0u));
+}
+
 /* interrupt_handler; role=vec_lo; action=read_nmi_vector_low_and_mark_nmi_ack */
 static inline qe6502_tick_t mc_nmi_c4_vec_lo(qe6502_t* cpu, uint8_t bus)
 {
@@ -900,6 +919,11 @@ static inline qe6502_tick_t mc_irq_c4_vec_lo(qe6502_t* cpu, uint8_t bus)
 static inline qe6502_tick_t mc_nmos_irq_c5_vec_hi(qe6502_t* cpu, uint8_t bus)
 {
     nmos_interrupt_vector_low(cpu, bus);
+    if (flag(cpu->interrupts, qe6502_interrupt_nmi_inv_pin) == 0)
+    {
+        cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_edge);
+        update_nmi_last_sampled(cpu);
+    }
     return read(cpu, 0xffffu);
 }
 
