@@ -143,6 +143,8 @@ enum
     qe6502_interrupt_irq_inv_pin  = (1u << 5),
 
     qe6502_interrupt_irq_taken  = (1u << 6),
+
+    qe6502_interrupt_sampling_off  = (1u << 7),
 };
 
 /* Microcode entry. */
