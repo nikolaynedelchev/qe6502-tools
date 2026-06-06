@@ -722,10 +722,6 @@ static qe6502_tick_t mc_reset_vec_hi(qe6502_t* cpu, uint8_t bus)
 static qe6502_tick_t mc_latch_pch_reset_fetch(qe6502_t* cpu, uint8_t bus)
 {
     cpu->PC = u16_set_byte(cpu->PC, 1, bus);
-
-    cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_edge);
-    update_nmi_last_sampled(cpu);
-
     return fetch(cpu);
 }
 
@@ -733,6 +729,8 @@ static qe6502_tick_t mc_latch_pch_reset_fetch(qe6502_t* cpu, uint8_t bus)
 static qe6502_tick_t mc_latch_pch_nmi_fetch(qe6502_t* cpu, uint8_t bus)
 {
     cpu->PC = u16_set_byte(cpu->PC, 1, bus);
+    cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_edge);
+    update_nmi_last_sampled(cpu);
     return fetch(cpu);
 }
 
