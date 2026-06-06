@@ -729,7 +729,10 @@ static qe6502_tick_t mc_latch_pch_reset_fetch(qe6502_t* cpu, uint8_t bus)
 static qe6502_tick_t mc_latch_pch_nmi_fetch(qe6502_t* cpu, uint8_t bus)
 {
     cpu->PC = u16_set_byte(cpu->PC, 1, bus);
-    cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_edge);
+    if(flag(cpu->interrupts, qe6502_interrupt_nmi_inv_pin) == 0)
+    {
+        cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_edge);
+    }
     update_nmi_last_sampled(cpu);
     return fetch(cpu);
 }
@@ -911,10 +914,10 @@ static inline qe6502_tick_t mc_irq_c3_push_p(qe6502_t* cpu, uint8_t bus)
     qe6502_tick_t tick = stack_write(cpu, stack_status(cpu->P, 0u));
     cpu->interrupts = find_active_interrupt(cpu->interrupts, cpu->P);
     cpu->interrupts = flag_on(cpu->interrupts, qe6502_interrupt_sampling_off);
+    cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_irq_taken);
     if (flag(cpu->interrupts, qe6502_interrupt_nmi_taken) != 0u)
     {
         cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_taken);
-        cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_irq_taken);
         next_enter_service_slot(cpu, service_slot_nmi, 4);
     }
     return tick;
