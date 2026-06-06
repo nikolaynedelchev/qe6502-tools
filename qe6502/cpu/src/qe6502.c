@@ -441,15 +441,15 @@ static inline void update_nmi_last_sampled(qe6502_t* cpu)
     }
 }
 
-static inline uint8_t find_active_interrupt(uint8_t interrupts, uint8_t cpu_flags, uint8_t check_nmi, uint8_t check_irq)
+static inline uint8_t find_active_interrupt(uint8_t interrupts, uint8_t cpu_flags)
 {
-    if (check_nmi != 0 && flag(interrupts, qe6502_interrupt_nmi_edge) != 0u)
+    if (flag(interrupts, qe6502_interrupt_nmi_edge) != 0u)
     {
         interrupts = flag_off(interrupts, qe6502_interrupt_nmi_edge);
         interrupts = flag_on(interrupts, qe6502_interrupt_nmi_taken);
         interrupts = flag_off(interrupts, qe6502_interrupt_irq_taken);
     }
-    else if(check_irq != 0 && flag(cpu_flags, flag_I) == 0u && flag(interrupts, qe6502_interrupt_irq_inv_pin) != 0u)
+    else if(flag(cpu_flags, flag_I) == 0u && flag(interrupts, qe6502_interrupt_irq_inv_pin) != 0u)
     {
         interrupts = flag_on(interrupts, qe6502_interrupt_irq_taken);
         interrupts = flag_off(interrupts, qe6502_interrupt_nmi_taken);
@@ -485,7 +485,7 @@ static qe6502_tick_t interrupt_resolver(qe6502_t* cpu, uint8_t bus)
     if(flag(cpu->interrupts, qe6502_interrupt_sampling) != 0u)
     {
         cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_sampling);
-        cpu->interrupts = find_active_interrupt(cpu->interrupts, initial_cpu_flags, 1u, 1u);
+        cpu->interrupts = find_active_interrupt(cpu->interrupts, initial_cpu_flags);
     }
     else if((tick.status & qe6502_status_opcode_fetch) != 0u)
     {
@@ -819,6 +819,7 @@ static qe6502_tick_t mc_stack_push_pc_low(qe6502_t* cpu, uint8_t bus)
 {
     (void)bus;
 
+    cpu->interrupts = find_active_interrupt(cpu->interrupts, cpu->P);
     return stack_write(cpu, u16_get_byte(cpu->PC, 0));
 }
 
@@ -829,7 +830,6 @@ static qe6502_tick_t mc_stack_push_status_b(qe6502_t* cpu, uint8_t bus)
 
     qe6502_tick_t tick = stack_write(cpu, stack_status(cpu->P, flag_B));
     cpu->interrupts = flag_on(cpu->interrupts, qe6502_interrupt_sampling_off);
-    cpu->interrupts = find_active_interrupt(cpu->interrupts, cpu->P, 1, 1);
     if (flag(cpu->interrupts, qe6502_interrupt_nmi_taken) != 0u)
     {
         cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_taken);
@@ -907,7 +907,6 @@ static inline qe6502_tick_t mc_irq_c3_push_p(qe6502_t* cpu, uint8_t bus)
 
     qe6502_tick_t tick = stack_write(cpu, stack_status(cpu->P, 0u));
     cpu->interrupts = flag_on(cpu->interrupts, qe6502_interrupt_sampling_off);
-    cpu->interrupts = find_active_interrupt(cpu->interrupts, cpu->P, 1, 0);
     if (flag(cpu->interrupts, qe6502_interrupt_nmi_taken) != 0u)
     {
         cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_taken);
