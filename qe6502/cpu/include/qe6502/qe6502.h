@@ -115,12 +115,6 @@ enum
     /* Tick is an opcode fetch boundary. */
     qe6502_status_opcode_fetch = (1u << 1),
 
-    /* NMI is acknowledged by the core on this tick. */
-    qe6502_status_nmi_ack = (1u << 2),
-
-    /* IRQ is acknowledged by the core on this tick. */
-    qe6502_status_irq_ack = (1u << 3),
-
     /* Internal reset procedure ticks. */
     qe6502_status_internal_reset = (1u << 6),
 
