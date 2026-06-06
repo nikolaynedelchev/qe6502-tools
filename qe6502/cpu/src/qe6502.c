@@ -447,10 +447,12 @@ static inline uint8_t find_active_interrupt(uint8_t interrupts, uint8_t cpu_flag
     {
         interrupts = flag_off(interrupts, qe6502_interrupt_nmi_edge);
         interrupts = flag_on(interrupts, qe6502_interrupt_nmi_taken);
+        interrupts = flag_off(interrupts, qe6502_interrupt_irq_taken);
     }
     else if(flag(cpu_flags, flag_I) == 0u && flag(interrupts, qe6502_interrupt_irq_inv_pin) != 0u)
     {
         interrupts = flag_on(interrupts, qe6502_interrupt_irq_taken);
+        interrupts = flag_off(interrupts, qe6502_interrupt_nmi_taken);
     }
     return interrupts;
 }
@@ -713,6 +715,20 @@ static qe6502_tick_t mc_reset_vec_hi(qe6502_t* cpu, uint8_t bus)
 static qe6502_tick_t mc_latch_pch_interrupt_fetch(qe6502_t* cpu, uint8_t bus)
 {
     cpu->PC = u16_set_byte(cpu->PC, 1, bus);
+
+    if (flag(cpu->interrupts, qe6502_interrupt_nmi_inv_pin) == 0)
+    {
+        cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_edge);
+        update_nmi_last_sampled(cpu);
+    }
+
+    return fetch(cpu);
+}
+
+/* interrupt_handler; role=latch_pch_interrupt_fetch; action=consume_vector_high_and_request_interrupt_handler_opcode */
+static qe6502_tick_t mc_latch_pch_rti_fetch(qe6502_t* cpu, uint8_t bus)
+{
+    cpu->PC = u16_set_byte(cpu->PC, 1, bus);
     return fetch(cpu);
 }
 
@@ -821,12 +837,6 @@ static qe6502_tick_t mc_brk_c5_vec_hi(qe6502_t* cpu, uint8_t bus)
     cpu->PC = u16_set_byte(cpu->PC, 0, bus);
     cpu->P = (uint8_t)(cpu->P | flag_I);
 
-    if (flag(cpu->interrupts, qe6502_interrupt_nmi_inv_pin) == 0)
-    {
-        cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_edge);
-        update_nmi_last_sampled(cpu);
-    }
-
     return read(cpu, 0xffffu);
 }
 
@@ -919,11 +929,6 @@ static inline qe6502_tick_t mc_irq_c4_vec_lo(qe6502_t* cpu, uint8_t bus)
 static inline qe6502_tick_t mc_nmos_irq_c5_vec_hi(qe6502_t* cpu, uint8_t bus)
 {
     nmos_interrupt_vector_low(cpu, bus);
-    if (flag(cpu->interrupts, qe6502_interrupt_nmi_inv_pin) == 0)
-    {
-        cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_edge);
-        update_nmi_last_sampled(cpu);
-    }
     return read(cpu, 0xffffu);
 }
 

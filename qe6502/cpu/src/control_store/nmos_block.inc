@@ -543,7 +543,7 @@
         [IDX(qe6502_model_nmos, 0x40, 2)] = &mc_stack_pull_read,
         [IDX(qe6502_model_nmos, 0x40, 3)] = &mc_rti_c3_pull_pcl,
         [IDX(qe6502_model_nmos, 0x40, 4)] = &mc_latch_pcl_stack_read_prefetch,
-        [IDX(qe6502_model_nmos, 0x40, 5)] = &mc_latch_pch_interrupt_fetch,
+        [IDX(qe6502_model_nmos, 0x40, 5)] = &mc_latch_pch_rti_fetch,
         [IDX(qe6502_model_nmos, 0x40, 6)] = &mc_dispatch,
 
         /* 0x41 EOR (zp,X) ; class=r_izx */
