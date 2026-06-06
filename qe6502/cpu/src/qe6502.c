@@ -714,7 +714,43 @@ static qe6502_tick_t mc_reset_vec_hi(qe6502_t* cpu, uint8_t bus)
 }
 
 /* interrupt_handler; role=latch_pch_interrupt_fetch; action=consume_vector_high_and_request_interrupt_handler_opcode */
-static qe6502_tick_t mc_latch_pch_interrupt_fetch(qe6502_t* cpu, uint8_t bus)
+static qe6502_tick_t mc_latch_pch_reset_fetch(qe6502_t* cpu, uint8_t bus)
+{
+    cpu->PC = u16_set_byte(cpu->PC, 1, bus);
+
+    cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_edge);
+    update_nmi_last_sampled(cpu);
+
+    return fetch(cpu);
+}
+
+/* interrupt_handler; role=latch_pch_interrupt_fetch; action=consume_vector_high_and_request_interrupt_handler_opcode */
+static qe6502_tick_t mc_latch_pch_nmi_fetch(qe6502_t* cpu, uint8_t bus)
+{
+    cpu->PC = u16_set_byte(cpu->PC, 1, bus);
+
+    cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_edge);
+    update_nmi_last_sampled(cpu);
+
+    return fetch(cpu);
+}
+
+/* interrupt_handler; role=latch_pch_interrupt_fetch; action=consume_vector_high_and_request_interrupt_handler_opcode */
+static qe6502_tick_t mc_latch_pch_irq_fetch(qe6502_t* cpu, uint8_t bus)
+{
+    cpu->PC = u16_set_byte(cpu->PC, 1, bus);
+
+    if (flag(cpu->interrupts, qe6502_interrupt_nmi_inv_pin) == 0)
+    {
+        cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_edge);
+        update_nmi_last_sampled(cpu);
+    }
+
+    return fetch(cpu);
+}
+
+/* interrupt_handler; role=latch_pch_interrupt_fetch; action=consume_vector_high_and_request_interrupt_handler_opcode */
+static qe6502_tick_t mc_latch_pch_brk_fetch(qe6502_t* cpu, uint8_t bus)
 {
     cpu->PC = u16_set_byte(cpu->PC, 1, bus);
 
