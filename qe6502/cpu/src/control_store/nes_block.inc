@@ -2,7 +2,7 @@
 
         /* NES service slots. */
 
-        [SERVICE_SLOT_IDX(qe6502_model_nes, service_slot_microcode_hijacked, 1)] = &interrupt_manager,
+        [SERVICE_SLOT_IDX(qe6502_model_nes, service_slot_microcode_hijacked, 1)] = &interrupt_resolver,
 
         [SERVICE_SLOT_IDX(qe6502_model_nes, service_slot_illegal_ext, 0)] = &mc_dispatch,
 

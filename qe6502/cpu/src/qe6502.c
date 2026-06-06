@@ -49,14 +49,14 @@ typedef enum service_slot
 #define IDX(model, slot, cycle) QE6502_IDX(model, slot, cycle)
 #define SERVICE_SLOT_IDX(model, service, cycle) QE6502_SERVICE_SLOT_IDX(model, service, cycle)
 
-static inline void enter_service_slot(qe6502_t* cpu, service_slot_t slot)
+static inline void enter_service_slot(qe6502_t* cpu, service_slot_t slot, uint8_t cycle)
 {
-    cpu->microcode = (uint16_t)SERVICE_SLOT_IDX(cpu->model, slot, 0u);
+    cpu->microcode = (uint16_t)SERVICE_SLOT_IDX(cpu->model, slot, cycle);
 }
 
-static inline void next_enter_service_slot(qe6502_t* cpu, service_slot_t slot)
+static inline void next_enter_service_slot(qe6502_t* cpu, service_slot_t slot, uint8_t cycle)
 {
-    enter_service_slot(cpu, slot);
+    enter_service_slot(cpu, slot, cycle);
     cpu->microcode--;
 }
 
@@ -429,6 +429,32 @@ static inline uint8_t flag_off(uint8_t flags, uint8_t mask)
     return (uint8_t)(flags & (~mask));
 }
 
+static inline void update_nmi_last_sampled(qe6502_t* cpu)
+{
+    if (flag(cpu->interrupts, qe6502_interrupt_nmi_inv_pin) != 0)
+    {
+        cpu->interrupts = flag_on(cpu->interrupts, qe6502_interrupt_nmi_inv_last_sampled_pin);
+    }
+    else
+    {
+        cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_inv_last_sampled_pin);
+    }
+}
+
+static inline uint8_t find_active_interrupt(uint8_t interrupts, uint8_t cpu_flags)
+{
+    if (flag(interrupts, qe6502_interrupt_nmi_edge) != 0u)
+    {
+        interrupts = flag_off(interrupts, qe6502_interrupt_nmi_edge);
+        interrupts = flag_on(interrupts, qe6502_interrupt_nmi_taken);
+    }
+    else if(flag(cpu_flags, flag_I) == 0u && flag(interrupts, qe6502_interrupt_irq_inv_pin) != 0u)
+    {
+        interrupts = flag_on(interrupts, qe6502_interrupt_irq_taken);
+    }
+    return interrupts;
+}
+
 static qe6502_tick_t read_pc_inc(qe6502_t* cpu)
 {
     qe6502_tick_t tick = read(cpu, cpu->PC);
@@ -437,20 +463,16 @@ static qe6502_tick_t read_pc_inc(qe6502_t* cpu)
 }
 
 /* shared_handler; role=kil_jam; action=read_jam_vector_high */
-static qe6502_tick_t interrupt_manager(qe6502_t* cpu, uint8_t bus)
+static qe6502_tick_t interrupt_resolver(qe6502_t* cpu, uint8_t bus)
 {
-    if (flag(cpu->interrupts, qe6502_interrupt_nmi_inv_pin) != 0)
+    if (flag(cpu->interrupts, qe6502_interrupt_nmi_inv_pin) != 0 &&
+        flag(cpu->interrupts, qe6502_interrupt_nmi_inv_last_sampled_pin) == 0)
     {
-        if (flag(cpu->interrupts, qe6502_interrupt_nmi_inv_last_sampled_pin) == 0)
-        {
-            cpu->interrupts = flag_on(cpu->interrupts, qe6502_interrupt_nmi_edge);
-        }
-        cpu->interrupts = flag_on(cpu->interrupts, qe6502_interrupt_nmi_inv_last_sampled_pin);
+        cpu->interrupts = flag_on(cpu->interrupts, qe6502_interrupt_nmi_edge);
     }
-    else
-    {
-        cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_inv_last_sampled_pin);
-    }
+    update_nmi_last_sampled(cpu);
+
+    uint8_t initial_cpu_flags = cpu->P;
 
     qe6502_tick_t tick = qe6502_control_store[cpu->microcode](cpu, bus);
     cpu->microcode++;
@@ -458,29 +480,21 @@ static qe6502_tick_t interrupt_manager(qe6502_t* cpu, uint8_t bus)
     if(flag(cpu->interrupts, qe6502_interrupt_sampling) != 0u)
     {
         cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_sampling);
-        if (flag(cpu->interrupts, qe6502_interrupt_nmi_edge) != 0u)
-        {
-            cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_edge);
-            cpu->interrupts = flag_on(cpu->interrupts, qe6502_interrupt_nmi_taken);
-        }
-        else if(flag(cpu->P, flag_I) == 0u && flag(cpu->interrupts, qe6502_interrupt_irq_inv_pin) != 0u)
-        {
-            cpu->interrupts = flag_on(cpu->interrupts, qe6502_interrupt_irq_taken);
-        }
+        cpu->interrupts = find_active_interrupt(cpu->interrupts, initial_cpu_flags);
     }
     else if((tick.status & qe6502_status_opcode_fetch) != 0u)
     {
         if (flag(cpu->interrupts, qe6502_interrupt_nmi_taken) != 0u)
         {
             cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_taken);
-            cpu->microcode = SERVICE_SLOT_IDX(cpu->model, service_slot_nmi, 0u);
+            enter_service_slot(cpu, service_slot_nmi, 0);
             tick.status = flag_on(tick.status, qe6502_status_nmi_ack);
             return tick;
         }
         else if(flag(cpu->interrupts, qe6502_interrupt_irq_taken) != 0u)
         {
             cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_irq_taken);
-            cpu->microcode = SERVICE_SLOT_IDX(cpu->model, service_slot_irq, 0u);
+            enter_service_slot(cpu, service_slot_irq, 0);
             tick.status = flag_on(tick.status, qe6502_status_irq_ack);
             return tick;
         }
@@ -555,7 +569,7 @@ static qe6502_tick_t mc_fetch_illegal_ext_dispatch(qe6502_t* cpu, uint8_t bus)
 {
     (void)bus;
 
-    next_enter_service_slot(cpu, service_slot_illegal_ext);
+    next_enter_service_slot(cpu, service_slot_illegal_ext, 0);
     return fetch(cpu);
 }
 
@@ -640,7 +654,7 @@ static qe6502_tick_t mc_internal_reset_c1(qe6502_t* cpu, uint8_t bus)
     cpu->PC = calculate_reset_pc(cpu->PC, bus);
     if (cpu->latch_data == 8)
     {
-        next_enter_service_slot(cpu, service_slot_reset_0);
+        next_enter_service_slot(cpu, service_slot_reset_0, 0);
         return read(cpu, cpu->PC);
     }
     // else
@@ -776,7 +790,21 @@ static qe6502_tick_t mc_stack_push_status_b(qe6502_t* cpu, uint8_t bus)
 {
     (void)bus;
 
-    return stack_write(cpu, stack_status(cpu->P, flag_B));
+    qe6502_tick_t tick = stack_write(cpu, stack_status(cpu->P, flag_B));
+    cpu->interrupts = find_active_interrupt(cpu->interrupts, cpu->P);
+    if (flag(cpu->interrupts, qe6502_interrupt_nmi_taken) != 0u)
+    {
+        cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_taken);
+        next_enter_service_slot(cpu, service_slot_nmi, 4);
+        tick.status = flag_on(tick.status, qe6502_status_nmi_ack);
+    }
+    else if(flag(cpu->interrupts, qe6502_interrupt_irq_taken) != 0u)
+    {
+        cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_irq_taken);
+        next_enter_service_slot(cpu, service_slot_irq, 4);
+        tick.status = flag_on(tick.status, qe6502_status_irq_ack);
+    }
+    return tick;
 }
 
 /* special_handler; role=vec_hi; action=read_brk_vector_high_to_pc_high_and_set_interrupt_disable */
@@ -784,6 +812,10 @@ static qe6502_tick_t mc_brk_c5_vec_hi(qe6502_t* cpu, uint8_t bus)
 {
     cpu->PC = u16_set_byte(cpu->PC, 0, bus);
     cpu->P = (uint8_t)(cpu->P | flag_I);
+
+    cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_edge);
+    update_nmi_last_sampled(cpu);
+
     return read(cpu, 0xffffu);
 }
 
@@ -815,6 +847,8 @@ static inline void cmos_interrupt_vector_low(qe6502_t* cpu, uint8_t bus)
 {
     cpu->PC = u16_set_byte(cpu->PC, 0, bus);
     cpu->P = (uint8_t)((cpu->P | flag_I) & (uint8_t)(~flag_D));
+    cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_edge);
+    update_nmi_last_sampled(cpu);
 }
 
 /* interrupt_handler; role=push_p; action=push_hardware_interrupt_status_to_stack */
@@ -822,7 +856,15 @@ static inline qe6502_tick_t mc_interrupt_c3_push_p(qe6502_t* cpu, uint8_t bus)
 {
     (void)bus;
 
-    return stack_write(cpu, stack_status(cpu->P, 0u));
+    qe6502_tick_t tick = stack_write(cpu, stack_status(cpu->P, 0u));
+    cpu->interrupts = find_active_interrupt(cpu->interrupts, cpu->P);
+    if (flag(cpu->interrupts, qe6502_interrupt_nmi_taken) != 0u)
+    {
+        cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_taken);
+        next_enter_service_slot(cpu, service_slot_nmi, 4);
+        tick.status = flag_on(tick.status, qe6502_status_nmi_ack);
+    }
+    return tick;
 }
 
 /* interrupt_handler; role=vec_lo; action=read_nmi_vector_low_and_mark_nmi_ack */
@@ -2839,7 +2881,7 @@ qe6502_tick_t qe6502_goto(qe6502_t *cpu, uint16_t address)
 {
     cpu->status = 0;
     cpu->PC = address;
-    enter_service_slot(cpu, service_slot_goto);
+    enter_service_slot(cpu, service_slot_goto, 0);
     return qe6502_tick(cpu, 0u);
 }
 
@@ -2895,7 +2937,7 @@ qe6502_tick_t qe6502_restart(qe6502_t *cpu)
     cpu->S = 0xc0u;
     cpu->X = 0xc0u;
     cpu->P = qe6502_flag_Z;
-    enter_service_slot(cpu, service_slot_internal_reset);
+    enter_service_slot(cpu, service_slot_internal_reset, 0);
 
     cpu->latch_data = 1;
     qe6502_tick_t tick = read(cpu, cpu->PC);
