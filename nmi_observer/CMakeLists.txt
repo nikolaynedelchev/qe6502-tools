@@ -14,14 +14,13 @@ add_executable(${target}
 
 target_link_libraries(${target}
     PRIVATE
-        qe6502::static
-        perfect6502
-        asm6502::asm6502
+        tools6502::tools6502
 )
 
 target_include_directories(${target}
     PRIVATE
         ${PROJECT_SOURCE_DIR}/qe6502/binds/cpp/include
+        ${PROJECT_SOURCE_DIR}/qe6502/cpu/include
         ${PROJECT_SOURCE_DIR}/qe6502/harness/third_party/perfect6502
 )
 
@@ -37,8 +36,7 @@ add_executable(cpu6502_interrupt_observer
 
 target_link_libraries(cpu6502_interrupt_observer
     PRIVATE
-        cpu6502_bridge::cpu6502_bridge
-        asm6502::asm6502
+        tools6502::tools6502
 )
 
 qe6502_configure_warnings(cpu6502_interrupt_observer)
@@ -55,8 +53,7 @@ add_library(nmi_observer_scripted_testcase_runner STATIC
 
 target_link_libraries(nmi_observer_scripted_testcase_runner
     PUBLIC
-        cpu6502_bridge::cpu6502_bridge
-        asm6502::asm6502
+        tools6502::tools6502
 )
 
 target_include_directories(nmi_observer_scripted_testcase_runner
@@ -74,7 +71,6 @@ add_executable(nmi_observer_scripted_testcase_runner_smoke
 target_link_libraries(nmi_observer_scripted_testcase_runner_smoke
     PRIVATE
         nmi_observer_scripted_testcase_runner
-        asm6502::asm6502
 )
 
 qe6502_configure_warnings(nmi_observer_scripted_testcase_runner_smoke)
@@ -90,7 +86,6 @@ add_executable(nmi_observer_debug_terminal_smoke
 target_link_libraries(nmi_observer_debug_terminal_smoke
     PRIVATE
         nmi_observer_scripted_testcase_runner
-        asm6502::asm6502
 )
 
 qe6502_configure_warnings(nmi_observer_debug_terminal_smoke)
@@ -105,7 +100,6 @@ add_executable(nmi_observer_debug_console
 target_link_libraries(nmi_observer_debug_console
     PRIVATE
         nmi_observer_scripted_testcase_runner
-        asm6502::asm6502
 )
 
 qe6502_configure_warnings(nmi_observer_debug_console)

@@ -76,7 +76,6 @@ message(STATUS "  QE6502_BUILD_TESTS       = ${QE6502_BUILD_TESTS}")
 message(STATUS "  QE6502_ENABLE_WERROR     = ${QE6502_ENABLE_WERROR}")
 
 add_subdirectory(qe6502)
-add_subdirectory(cpu6502_bridge)
 add_subdirectory(nmi_observer)
 
 

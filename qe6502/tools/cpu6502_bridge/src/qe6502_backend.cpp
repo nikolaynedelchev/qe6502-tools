@@ -16,6 +16,8 @@ public:
         restart();
     }
 
+    const char* get_name() const noexcept override { return "qe6502"; }
+
     void restart() noexcept override
     {
         tick_ = qe6502_restart(&cpu_);

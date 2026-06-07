@@ -12,6 +12,8 @@ class ICpu
 public:
     virtual ~ICpu() = default;
 
+    virtual const char* get_name() const noexcept = 0;
+
     void clear_memory(uint8_t value) noexcept;
     virtual void restart() noexcept = 0;
 

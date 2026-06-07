@@ -16,6 +16,7 @@ namespace {
 constexpr nodenum_t perfect_clk0 = 1171;
 constexpr nodenum_t perfect_irq = 103;
 constexpr nodenum_t perfect_nmi = 1297;
+constexpr nodenum_t perfect_res = 159;
 constexpr nodenum_t perfect_sync = 539;
 
 bool next_step_is_memory_half(state_t* state) noexcept
@@ -41,6 +42,8 @@ public:
     Perfect6502Cpu(const Perfect6502Cpu&) = delete;
     Perfect6502Cpu& operator=(const Perfect6502Cpu&) = delete;
 
+    const char* get_name() const noexcept override { return "perfect6502"; }
+
     void restart() noexcept override
     {
         if (state_ != nullptr) {
@@ -54,6 +57,27 @@ public:
         clear_snapshot();
     }
 
+    unsigned restart_to_start_fetch(unsigned max_steps = 64) override
+    {
+        const auto* mem = memory();
+        const std::uint16_t start_address =
+            static_cast<std::uint16_t>(mem[0xfffc])
+            | static_cast<std::uint16_t>(mem[0xfffd] << 8);
+
+        reset_chip_without_rebuild();
+
+        for (unsigned steps = 0; steps < max_steps; ++steps) {
+            if (is_opcode_fetch()
+                && !is_write()
+                && bus_address() == start_address) {
+                return steps;
+            }
+
+            step();
+        }
+
+        return max_steps;
+    }
 
     void irq(bool assert_irq) noexcept override
     {
@@ -189,6 +213,29 @@ private:
     void clear_snapshot() noexcept
     {
         snapshot_ = Snapshot{};
+    }
+
+    void reset_chip_without_rebuild() noexcept
+    {
+        if (state_ == nullptr) {
+            restart();
+            return;
+        }
+
+        irq_asserted_ = false;
+        nmi_asserted_ = false;
+        setNode(state_, perfect_irq, 1);
+        setNode(state_, perfect_nmi, 1);
+        setNode(state_, perfect_res, 0);
+        recalcNodeList(state_);
+
+        for (int i = 0; i < 16; ++i) {
+            step_one_half();
+        }
+
+        setNode(state_, perfect_res, 1);
+        recalcNodeList(state_);
+        clear_snapshot();
     }
 
     state_t* state_ = nullptr;
