@@ -79,6 +79,74 @@ void test_config_callback_can_install_full_memory_image()
     require(!result.first_mismatch, "unexpected mismatch in config callback setup");
 }
 
+
+void test_memory_unchanged_reinstalls_testcase_without_full_init()
+{
+    tools6502::testcase test{};
+    test.start_at = 0x0500u;
+    test.program = asm6502::Asm6502::New()
+        .begin()
+        .org(test.start_at)
+            .lda(0x42u)
+            .nop()
+            .jmp(test.start_at)
+        .end()
+        .compile();
+
+    tools6502::LockstepConfig config{};
+    config.memory = tools6502::MemoryUnchanged{};
+
+    tools6502::LockstepRunner runner(cpu6502_bridge::make_qe6502_cpu(),
+                                     cpu6502_bridge::make_perfect6502_cpu());
+
+    require(runner.setup_and_run(test, config), "setup_and_run with MemoryUnchanged failed");
+    require(runner.left().bus_address() == test.start_at, "left not at start with MemoryUnchanged");
+    require(runner.right().bus_address() == test.start_at, "right not at start with MemoryUnchanged");
+
+    const auto result = runner.step_cycles(3u);
+    require(result.passed, "MemoryUnchanged run did not pass");
+    require(!result.first_mismatch, "MemoryUnchanged run mismatched");
+}
+
+void test_scenario_runner_maps_one_result_per_command()
+{
+    tools6502::testcase test{};
+    test.start_at = 0x0600u;
+    test.program = asm6502::Asm6502::New()
+        .begin()
+        .org(test.start_at)
+            .nop()
+            .nop()
+            .jmp(test.start_at)
+        .end()
+        .compile();
+
+    tools6502::LockstepConfig config{};
+    config.memory = tools6502::MemoryUnchanged{};
+
+    tools6502::LockstepScenarioRunner runner(cpu6502_bridge::make_qe6502_cpu(),
+                                             cpu6502_bridge::make_perfect6502_cpu());
+
+    require(runner.setup(test, config), "scenario setup failed");
+
+    const std::vector<tools6502::LockstepCommand> script{
+        tools6502::Step{},
+        tools6502::NmiAssert{},
+        tools6502::StepCycles{2u},
+        tools6502::NmiDeassert{},
+        tools6502::StepToFetch{8u}
+    };
+
+    const auto result = runner.restart_run(script);
+    require(result.passed, "scenario runner failed");
+    require(!result.first_failed_command, "scenario runner reported failed command");
+    require(result.results.size() == script.size(), "scenario result count does not match command count");
+    require(result.results[1].left_trace.empty(), "NMI assert should have empty left trace");
+    require(result.results[1].right_trace.empty(), "NMI assert should have empty right trace");
+    require(result.results[2].left_trace.size() == 2u, "StepCycles trace size mismatch");
+    require(result.results[2].right_trace.size() == 2u, "StepCycles right trace size mismatch");
+}
+
 } // namespace
 
 int main()
@@ -86,5 +154,7 @@ int main()
     test_cpu_names_are_available();
     test_bootstrapped_testcase_runs_to_start_and_steps();
     test_config_callback_can_install_full_memory_image();
+    test_memory_unchanged_reinstalls_testcase_without_full_init();
+    test_scenario_runner_maps_one_result_per_command();
     return 0;
 }

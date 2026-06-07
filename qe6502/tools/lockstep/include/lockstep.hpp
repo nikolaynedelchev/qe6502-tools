@@ -16,6 +16,10 @@ namespace tools6502 {
 
 using memory_image = std::array<std::uint8_t, 65536>;
 
+struct MemoryUnchanged
+{
+};
+
 struct MemoryFill
 {
     std::uint8_t value = 0xeau;
@@ -31,7 +35,7 @@ struct MemoryCallback
     std::function<void(memory_image& memory)> apply;
 };
 
-using MemoryInit = std::variant<MemoryFill, MemoryRandom, MemoryCallback>;
+using MemoryInit = std::variant<MemoryUnchanged, MemoryFill, MemoryRandom, MemoryCallback>;
 
 struct CompareOptions
 {
@@ -67,9 +71,68 @@ struct CpuTraceEntry
 
 struct LockstepRunResult
 {
+    bool passed = true;
     std::vector<CpuTraceEntry> left_trace{};
     std::vector<CpuTraceEntry> right_trace{};
     std::optional<std::size_t> first_mismatch{};
+};
+
+struct Step
+{
+};
+
+struct StepCycles
+{
+    std::size_t count = 0u;
+};
+
+struct StepToFetch
+{
+    std::size_t max_steps = 0u;
+};
+
+struct StepToFetchAt
+{
+    std::uint16_t address = 0u;
+    std::size_t max_steps = 0u;
+};
+
+struct NmiAssert
+{
+};
+
+struct NmiDeassert
+{
+};
+
+struct IrqAssert
+{
+};
+
+struct IrqDeassert
+{
+};
+
+using LockstepCommand = std::variant<
+    Step,
+    StepCycles,
+    StepToFetch,
+    StepToFetchAt,
+    NmiAssert,
+    NmiDeassert,
+    IrqAssert,
+    IrqDeassert>;
+
+struct LockstepScenarioConfig
+{
+    bool stop_on_failure = true;
+};
+
+struct LockstepScenarioResult
+{
+    bool passed = true;
+    std::vector<LockstepRunResult> results{};
+    std::optional<std::size_t> first_failed_command{};
 };
 
 class LockstepRunner
@@ -96,14 +159,40 @@ public:
     LockstepRunResult step_to_fetch_at(std::uint16_t address,
                                        std::size_t max_steps);
 
-    void irq(bool asserted) noexcept;
-    void nmi(bool asserted) noexcept;
+    LockstepRunResult irq(bool asserted);
+    LockstepRunResult nmi(bool asserted);
 
 private:
     std::unique_ptr<cpu6502_bridge::ICpu> left_;
     std::unique_ptr<cpu6502_bridge::ICpu> right_;
     CompareOptions compare_{};
     std::size_t cycle_ = 0u;
+};
+
+class LockstepScenarioRunner
+{
+public:
+    LockstepScenarioRunner(std::unique_ptr<cpu6502_bridge::ICpu> left,
+                           std::unique_ptr<cpu6502_bridge::ICpu> right);
+
+    LockstepScenarioRunner(const LockstepScenarioRunner&) = delete;
+    LockstepScenarioRunner& operator=(const LockstepScenarioRunner&) = delete;
+
+    bool setup(const testcase& test,
+               const LockstepConfig& lockstep_config = {});
+
+    LockstepScenarioResult restart_run(
+        const std::vector<LockstepCommand>& commands,
+        const LockstepScenarioConfig& scenario_config = {});
+
+    LockstepRunner& lockstep() noexcept;
+    const LockstepRunner& lockstep() const noexcept;
+
+private:
+    LockstepRunner lockstep_;
+    testcase test_{};
+    LockstepConfig lockstep_config_{};
+    bool has_setup_ = false;
 };
 
 } // namespace tools6502

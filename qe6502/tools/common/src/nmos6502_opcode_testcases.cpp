@@ -11,39 +11,6 @@
 namespace tools6502 {
 
 
-namespace {
-
-testcase make_testcase(std::uint8_t opcode,
-                       std::uint8_t bytes,
-                       std::uint16_t start_at,
-                       std::uint16_t brk_irq_vector,
-                       std::uint16_t nmi_vector,
-                       std::uint8_t A,
-                       std::uint8_t X,
-                       std::uint8_t Y,
-                       std::uint8_t P,
-                       std::uint8_t S,
-                       memory_setup program,
-                       std::string description)
-{
-    testcase test{};
-    test.opcode = opcode;
-    test.bytes = bytes;
-    test.start_at = start_at;
-    test.vectors.reset = 0x0200u;
-    test.vectors.brk_irq = brk_irq_vector;
-    test.vectors.nmi = nmi_vector;
-    test.initial_state.A = A;
-    test.initial_state.X = X;
-    test.initial_state.Y = Y;
-    test.initial_state.P = P;
-    test.initial_state.S = S;
-    test.program = std::move(program);
-    test.description = std::move(description);
-    return test;
-}
-
-} // namespace
 
 /*
  * Return NMOS 6502 opcode timing/scenario testcases for every byte value 0x00-0xFF,
@@ -79,8 +46,13 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
         {
             0x00,
             {
-                make_testcase(0x00, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x00,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .brk_irq_vector("trap")
                         .org(0x0400)
@@ -88,15 +60,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x0800, "trap")
                             .jmp("trap")
                     .end().compile(),
-                    "BRK vectors through BRK/IRQ vector"),
+                    .description = "BRK vectors through BRK/IRQ vector",
+                },
             }
         },
         // 0x01
         {
             0x01,
             {
-                make_testcase(0x01, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x01,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_ptr_base")
                         .org(0x0008, "zp_ptr")
@@ -108,30 +86,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ORA (zp,X) indexed indirect with zero-page pointer-base wraparound"),
+                    .description = "ORA (zp,X) indexed indirect with zero-page pointer-base wraparound",
+                },
             }
         },
         // 0x02
         {
             0x02,
             {
-                make_testcase(0x02, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x02,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .kil_opcode(0x02)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "KIL/JAM enters JAM/KIL bus loop"),
+                    .description = "KIL/JAM enters JAM/KIL bus loop",
+                },
             }
         },
         // 0x03
         {
             0x03,
             {
-                make_testcase(0x03, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x03,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_ptr_base")
                         .org(0x0008, "zp_ptr")
@@ -143,15 +133,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SLO (zp,X) indexed indirect with zero-page pointer-base wraparound"),
+                    .description = "SLO (zp,X) indexed indirect with zero-page pointer-base wraparound",
+                },
             }
         },
         // 0x04
         {
             0x04,
             {
-                make_testcase(0x04, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x04,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x87)
@@ -160,15 +156,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP zp zero page"),
+                    .description = "NOP zp zero page",
+                },
             }
         },
         // 0x05
         {
             0x05,
             {
-                make_testcase(0x05, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x05,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x87)
@@ -177,15 +179,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ORA zp zero page"),
+                    .description = "ORA zp zero page",
+                },
             }
         },
         // 0x06
         {
             0x06,
             {
-                make_testcase(0x06, 2, 0x0400, 0x0800, 0x0800, 0x81, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x06,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x41)
@@ -194,15 +202,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ASL zp zero page"),
+                    .description = "ASL zp zero page",
+                },
             }
         },
         // 0x07
         {
             0x07,
             {
-                make_testcase(0x07, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x07,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x41)
@@ -211,75 +225,105 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SLO zp zero page"),
+                    .description = "SLO zp zero page",
+                },
             }
         },
         // 0x08
         {
             0x08,
             {
-                make_testcase(0x08, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0xe5, 0xfe,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x08,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0xe5, .S = 0xfe,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .php()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "PHP implied"),
+                    .description = "PHP implied",
+                },
             }
         },
         // 0x09
         {
             0x09,
             {
-                make_testcase(0x09, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x09,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .ora(0x18)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ORA #imm immediate"),
+                    .description = "ORA #imm immediate",
+                },
             }
         },
         // 0x0A
         {
             0x0A,
             {
-                make_testcase(0x0A, 1, 0x0400, 0x0800, 0x0800, 0x81, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x0A,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .asl()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ASL A accumulator"),
+                    .description = "ASL A accumulator",
+                },
             }
         },
         // 0x0B
         {
             0x0B,
             {
-                make_testcase(0x0B, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x0B,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .anc(0x7f)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ANC #imm immediate"),
+                    .description = "ANC #imm immediate",
+                },
             }
         },
         // 0x0C
         {
             0x0C,
             {
-                make_testcase(0x0C, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x0C,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .nop_opcode(0x0C, "value_addr")
@@ -288,15 +332,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x87)
                     .end().compile(),
-                    "NOP abs absolute"),
+                    .description = "NOP abs absolute",
+                },
             }
         },
         // 0x0D
         {
             0x0D,
             {
-                make_testcase(0x0D, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x0D,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .ora(absolute, "value_addr")
@@ -305,15 +355,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x87)
                     .end().compile(),
-                    "ORA abs absolute"),
+                    .description = "ORA abs absolute",
+                },
             }
         },
         // 0x0E
         {
             0x0E,
             {
-                make_testcase(0x0E, 3, 0x0400, 0x0800, 0x0800, 0x81, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x0E,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .asl(absolute, "value_addr")
@@ -322,15 +378,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x41)
                     .end().compile(),
-                    "ASL abs absolute"),
+                    .description = "ASL abs absolute",
+                },
             }
         },
         // 0x0F
         {
             0x0F,
             {
-                make_testcase(0x0F, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x0F,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .slo(absolute, "value_addr")
@@ -339,15 +401,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x41)
                     .end().compile(),
-                    "SLO abs absolute"),
+                    .description = "SLO abs absolute",
+                },
             }
         },
         // 0x10
         {
             0x10,
             {
-                make_testcase(0x10, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0xa4, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x10,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0xa4, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .bpl("branch_target")
@@ -355,33 +423,51 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                             .jmp("trap")
                         .org(0x0420, "branch_target")
                     .end().compile(),
-                    "BPL rel not taken with a non-fallthrough encoded target"),
-                make_testcase(0x10, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "BPL rel not taken with a non-fallthrough encoded target",
+                },
+                testcase{
+                    .opcode = 0x10,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .bpl("trap")
                         .org(0x0420, "trap")
                             .jmp("trap")
                     .end().compile(),
-                    "BPL rel taken without page cross to a non-fallthrough target"),
-                make_testcase(0x10, 2, 0x04f0, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "BPL rel taken without page cross to a non-fallthrough target",
+                },
+                testcase{
+                    .opcode = 0x10,
+                    .bytes = 2,
+                    .start_at = 0x04f0,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x04f0)
                             .bpl("trap")
                         .org(0x0505, "trap")
                             .jmp("trap")
                     .end().compile(),
-                    "BPL rel taken with page cross"),
+                    .description = "BPL rel taken with page cross",
+                },
             }
         },
         // 0x11
         {
             0x11,
             {
-                make_testcase(0x11, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x11,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -393,9 +479,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ORA (zp),Y indirect indexed without page cross"),
-                make_testcase(0x11, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "ORA (zp),Y indirect indexed without page cross",
+                },
+                testcase{
+                    .opcode = 0x11,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -407,30 +499,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ORA (zp),Y indirect indexed with page cross"),
+                    .description = "ORA (zp),Y indirect indexed with page cross",
+                },
             }
         },
         // 0x12
         {
             0x12,
             {
-                make_testcase(0x12, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x12,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .kil_opcode(0x12)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "KIL/JAM enters JAM/KIL bus loop"),
+                    .description = "KIL/JAM enters JAM/KIL bus loop",
+                },
             }
         },
         // 0x13
         {
             0x13,
             {
-                make_testcase(0x13, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x13,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -442,9 +546,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SLO (zp),Y indirect indexed"),
-                make_testcase(0x13, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "SLO (zp),Y indirect indexed",
+                },
+                testcase{
+                    .opcode = 0x13,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -456,15 +566,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SLO (zp),Y indirect indexed with page cross"),
+                    .description = "SLO (zp),Y indirect indexed with page cross",
+                },
             }
         },
         // 0x14
         {
             0x14,
             {
-                make_testcase(0x14, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x14,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -474,15 +590,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP zp,X zero page,X with wraparound"),
+                    .description = "NOP zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0x15
         {
             0x15,
             {
-                make_testcase(0x15, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x15,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -492,15 +614,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ORA zp,X zero page,X with wraparound"),
+                    .description = "ORA zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0x16
         {
             0x16,
             {
-                make_testcase(0x16, 2, 0x0400, 0x0800, 0x0800, 0x81, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x16,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -510,15 +638,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ASL zp,X zero page,X with wraparound"),
+                    .description = "ASL zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0x17
         {
             0x17,
             {
-                make_testcase(0x17, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x17,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -528,30 +662,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SLO zp,X zero page,X with wraparound"),
+                    .description = "SLO zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0x18
         {
             0x18,
             {
-                make_testcase(0x18, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x18,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .clc()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "CLC implied"),
+                    .description = "CLC implied",
+                },
             }
         },
         // 0x19
         {
             0x19,
             {
-                make_testcase(0x19, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x19,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -561,9 +707,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ORA abs,Y absolute,Y without page cross"),
-                make_testcase(0x19, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "ORA abs,Y absolute,Y without page cross",
+                },
+                testcase{
+                    .opcode = 0x19,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -573,30 +725,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ORA abs,Y absolute,Y with page cross"),
+                    .description = "ORA abs,Y absolute,Y with page cross",
+                },
             }
         },
         // 0x1A
         {
             0x1A,
             {
-                make_testcase(0x1A, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x1A,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .nop_opcode(0x1A)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP implied"),
+                    .description = "NOP implied",
+                },
             }
         },
         // 0x1B
         {
             0x1B,
             {
-                make_testcase(0x1B, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x1B,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -606,9 +770,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SLO abs,Y absolute,Y"),
-                make_testcase(0x1B, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "SLO abs,Y absolute,Y",
+                },
+                testcase{
+                    .opcode = 0x1B,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -618,15 +788,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SLO abs,Y absolute,Y with page cross"),
+                    .description = "SLO abs,Y absolute,Y with page cross",
+                },
             }
         },
         // 0x1C
         {
             0x1C,
             {
-                make_testcase(0x1C, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x1C,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -636,9 +812,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP abs,X absolute,X without page cross"),
-                make_testcase(0x1C, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "NOP abs,X absolute,X without page cross",
+                },
+                testcase{
+                    .opcode = 0x1C,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -648,15 +830,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP abs,X absolute,X with page cross"),
+                    .description = "NOP abs,X absolute,X with page cross",
+                },
             }
         },
         // 0x1D
         {
             0x1D,
             {
-                make_testcase(0x1D, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x1D,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -666,9 +854,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ORA abs,X absolute,X without page cross"),
-                make_testcase(0x1D, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "ORA abs,X absolute,X without page cross",
+                },
+                testcase{
+                    .opcode = 0x1D,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -678,15 +872,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ORA abs,X absolute,X with page cross"),
+                    .description = "ORA abs,X absolute,X with page cross",
+                },
             }
         },
         // 0x1E
         {
             0x1E,
             {
-                make_testcase(0x1E, 3, 0x0400, 0x0800, 0x0800, 0x81, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x1E,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -696,9 +896,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ASL abs,X absolute,X"),
-                make_testcase(0x1E, 3, 0x0400, 0x0800, 0x0800, 0x81, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "ASL abs,X absolute,X",
+                },
+                testcase{
+                    .opcode = 0x1E,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -708,15 +914,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ASL abs,X absolute,X with page cross"),
+                    .description = "ASL abs,X absolute,X with page cross",
+                },
             }
         },
         // 0x1F
         {
             0x1F,
             {
-                make_testcase(0x1F, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x1F,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -726,9 +938,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SLO abs,X absolute,X"),
-                make_testcase(0x1F, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "SLO abs,X absolute,X",
+                },
+                testcase{
+                    .opcode = 0x1F,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -738,30 +956,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SLO abs,X absolute,X with page cross"),
+                    .description = "SLO abs,X absolute,X with page cross",
+                },
             }
         },
         // 0x20
         {
             0x20,
             {
-                make_testcase(0x20, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x20,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .jsr("trap")
                         .org(0x0800, "trap")
                             .jmp("trap")
                     .end().compile(),
-                    "JSR abs jumps to subroutine target"),
+                    .description = "JSR abs jumps to subroutine target",
+                },
             }
         },
         // 0x21
         {
             0x21,
             {
-                make_testcase(0x21, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x21,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_ptr_base")
                         .org(0x0008, "zp_ptr")
@@ -773,30 +1003,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "AND (zp,X) indexed indirect with zero-page pointer-base wraparound"),
+                    .description = "AND (zp,X) indexed indirect with zero-page pointer-base wraparound",
+                },
             }
         },
         // 0x22
         {
             0x22,
             {
-                make_testcase(0x22, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x22,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .kil_opcode(0x22)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "KIL/JAM enters JAM/KIL bus loop"),
+                    .description = "KIL/JAM enters JAM/KIL bus loop",
+                },
             }
         },
         // 0x23
         {
             0x23,
             {
-                make_testcase(0x23, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x23,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_ptr_base")
                         .org(0x0008, "zp_ptr")
@@ -808,15 +1050,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "RLA (zp,X) indexed indirect with zero-page pointer-base wraparound"),
+                    .description = "RLA (zp,X) indexed indirect with zero-page pointer-base wraparound",
+                },
             }
         },
         // 0x24
         {
             0x24,
             {
-                make_testcase(0x24, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x24,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0xc0)
@@ -825,15 +1073,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "BIT zp zero page"),
+                    .description = "BIT zp zero page",
+                },
             }
         },
         // 0x25
         {
             0x25,
             {
-                make_testcase(0x25, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x25,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x87)
@@ -842,15 +1096,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "AND zp zero page"),
+                    .description = "AND zp zero page",
+                },
             }
         },
         // 0x26
         {
             0x26,
             {
-                make_testcase(0x26, 2, 0x0400, 0x0800, 0x0800, 0x81, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x26,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x81)
@@ -859,15 +1119,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ROL zp zero page"),
+                    .description = "ROL zp zero page",
+                },
             }
         },
         // 0x27
         {
             0x27,
             {
-                make_testcase(0x27, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x27,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x81)
@@ -876,15 +1142,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "RLA zp zero page"),
+                    .description = "RLA zp zero page",
+                },
             }
         },
         // 0x28
         {
             0x28,
             {
-                make_testcase(0x28, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x28,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x01fe, "stack_value")
                             .db(0xa5)
@@ -893,60 +1165,84 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "PLP pulls value from stack"),
+                    .description = "PLP pulls value from stack",
+                },
             }
         },
         // 0x29
         {
             0x29,
             {
-                make_testcase(0x29, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x29,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .and_(0x3c)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "AND #imm immediate"),
+                    .description = "AND #imm immediate",
+                },
             }
         },
         // 0x2A
         {
             0x2A,
             {
-                make_testcase(0x2A, 1, 0x0400, 0x0800, 0x0800, 0x81, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x2A,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .rol()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ROL A accumulator"),
+                    .description = "ROL A accumulator",
+                },
             }
         },
         // 0x2B
         {
             0x2B,
             {
-                make_testcase(0x2B, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x2B,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .anc_opcode(0x2B, 0x7f)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ANC #imm immediate"),
+                    .description = "ANC #imm immediate",
+                },
             }
         },
         // 0x2C
         {
             0x2C,
             {
-                make_testcase(0x2C, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x2C,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .bit(absolute, "value_addr")
@@ -955,15 +1251,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0xc0)
                     .end().compile(),
-                    "BIT abs absolute"),
+                    .description = "BIT abs absolute",
+                },
             }
         },
         // 0x2D
         {
             0x2D,
             {
-                make_testcase(0x2D, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x2D,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .and_(absolute, "value_addr")
@@ -972,15 +1274,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x87)
                     .end().compile(),
-                    "AND abs absolute"),
+                    .description = "AND abs absolute",
+                },
             }
         },
         // 0x2E
         {
             0x2E,
             {
-                make_testcase(0x2E, 3, 0x0400, 0x0800, 0x0800, 0x81, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x2E,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .rol(absolute, "value_addr")
@@ -989,15 +1297,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x81)
                     .end().compile(),
-                    "ROL abs absolute"),
+                    .description = "ROL abs absolute",
+                },
             }
         },
         // 0x2F
         {
             0x2F,
             {
-                make_testcase(0x2F, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x2F,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .rla(absolute, "value_addr")
@@ -1006,15 +1320,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x81)
                     .end().compile(),
-                    "RLA abs absolute"),
+                    .description = "RLA abs absolute",
+                },
             }
         },
         // 0x30
         {
             0x30,
             {
-                make_testcase(0x30, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x30,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .bmi("branch_target")
@@ -1022,33 +1342,51 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                             .jmp("trap")
                         .org(0x0420, "branch_target")
                     .end().compile(),
-                    "BMI rel not taken with a non-fallthrough encoded target"),
-                make_testcase(0x30, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0xa4, 0xfd,
-                    Asm6502::New()
+                    .description = "BMI rel not taken with a non-fallthrough encoded target",
+                },
+                testcase{
+                    .opcode = 0x30,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0xa4, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .bmi("trap")
                         .org(0x0420, "trap")
                             .jmp("trap")
                     .end().compile(),
-                    "BMI rel taken without page cross to a non-fallthrough target"),
-                make_testcase(0x30, 2, 0x04f0, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0xa4, 0xfd,
-                    Asm6502::New()
+                    .description = "BMI rel taken without page cross to a non-fallthrough target",
+                },
+                testcase{
+                    .opcode = 0x30,
+                    .bytes = 2,
+                    .start_at = 0x04f0,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0xa4, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x04f0)
                             .bmi("trap")
                         .org(0x0505, "trap")
                             .jmp("trap")
                     .end().compile(),
-                    "BMI rel taken with page cross"),
+                    .description = "BMI rel taken with page cross",
+                },
             }
         },
         // 0x31
         {
             0x31,
             {
-                make_testcase(0x31, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x31,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -1060,9 +1398,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "AND (zp),Y indirect indexed without page cross"),
-                make_testcase(0x31, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "AND (zp),Y indirect indexed without page cross",
+                },
+                testcase{
+                    .opcode = 0x31,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -1074,30 +1418,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "AND (zp),Y indirect indexed with page cross"),
+                    .description = "AND (zp),Y indirect indexed with page cross",
+                },
             }
         },
         // 0x32
         {
             0x32,
             {
-                make_testcase(0x32, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x32,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .kil_opcode(0x32)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "KIL/JAM enters JAM/KIL bus loop"),
+                    .description = "KIL/JAM enters JAM/KIL bus loop",
+                },
             }
         },
         // 0x33
         {
             0x33,
             {
-                make_testcase(0x33, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x10, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x33,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x10, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -1109,9 +1465,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "RLA (zp),Y indirect indexed"),
-                make_testcase(0x33, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "RLA (zp),Y indirect indexed",
+                },
+                testcase{
+                    .opcode = 0x33,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -1123,15 +1485,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "RLA (zp),Y indirect indexed with page cross"),
+                    .description = "RLA (zp),Y indirect indexed with page cross",
+                },
             }
         },
         // 0x34
         {
             0x34,
             {
-                make_testcase(0x34, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x34,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -1141,15 +1509,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP zp,X zero page,X with wraparound"),
+                    .description = "NOP zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0x35
         {
             0x35,
             {
-                make_testcase(0x35, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x35,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -1159,15 +1533,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "AND zp,X zero page,X with wraparound"),
+                    .description = "AND zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0x36
         {
             0x36,
             {
-                make_testcase(0x36, 2, 0x0400, 0x0800, 0x0800, 0x81, 0x10, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x36,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x10, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -1177,15 +1557,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ROL zp,X zero page,X with wraparound"),
+                    .description = "ROL zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0x37
         {
             0x37,
             {
-                make_testcase(0x37, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x37,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -1195,30 +1581,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "RLA zp,X zero page,X with wraparound"),
+                    .description = "RLA zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0x38
         {
             0x38,
             {
-                make_testcase(0x38, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x38,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .sec()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SEC implied"),
+                    .description = "SEC implied",
+                },
             }
         },
         // 0x39
         {
             0x39,
             {
-                make_testcase(0x39, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x39,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -1228,9 +1626,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "AND abs,Y absolute,Y without page cross"),
-                make_testcase(0x39, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "AND abs,Y absolute,Y without page cross",
+                },
+                testcase{
+                    .opcode = 0x39,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -1240,30 +1644,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "AND abs,Y absolute,Y with page cross"),
+                    .description = "AND abs,Y absolute,Y with page cross",
+                },
             }
         },
         // 0x3A
         {
             0x3A,
             {
-                make_testcase(0x3A, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x3A,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .nop_opcode(0x3A)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP implied"),
+                    .description = "NOP implied",
+                },
             }
         },
         // 0x3B
         {
             0x3B,
             {
-                make_testcase(0x3B, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x10, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x3B,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x10, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -1273,9 +1689,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "RLA abs,Y absolute,Y"),
-                make_testcase(0x3B, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "RLA abs,Y absolute,Y",
+                },
+                testcase{
+                    .opcode = 0x3B,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -1285,15 +1707,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "RLA abs,Y absolute,Y with page cross"),
+                    .description = "RLA abs,Y absolute,Y with page cross",
+                },
             }
         },
         // 0x3C
         {
             0x3C,
             {
-                make_testcase(0x3C, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x3C,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -1303,9 +1731,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP abs,X absolute,X without page cross"),
-                make_testcase(0x3C, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "NOP abs,X absolute,X without page cross",
+                },
+                testcase{
+                    .opcode = 0x3C,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -1315,15 +1749,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP abs,X absolute,X with page cross"),
+                    .description = "NOP abs,X absolute,X with page cross",
+                },
             }
         },
         // 0x3D
         {
             0x3D,
             {
-                make_testcase(0x3D, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x3D,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -1333,9 +1773,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "AND abs,X absolute,X without page cross"),
-                make_testcase(0x3D, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "AND abs,X absolute,X without page cross",
+                },
+                testcase{
+                    .opcode = 0x3D,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -1345,15 +1791,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "AND abs,X absolute,X with page cross"),
+                    .description = "AND abs,X absolute,X with page cross",
+                },
             }
         },
         // 0x3E
         {
             0x3E,
             {
-                make_testcase(0x3E, 3, 0x0400, 0x0800, 0x0800, 0x81, 0x10, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x3E,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x10, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -1363,9 +1815,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ROL abs,X absolute,X"),
-                make_testcase(0x3E, 3, 0x0400, 0x0800, 0x0800, 0x81, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "ROL abs,X absolute,X",
+                },
+                testcase{
+                    .opcode = 0x3E,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -1375,15 +1833,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ROL abs,X absolute,X with page cross"),
+                    .description = "ROL abs,X absolute,X with page cross",
+                },
             }
         },
         // 0x3F
         {
             0x3F,
             {
-                make_testcase(0x3F, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x3F,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -1393,9 +1857,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "RLA abs,X absolute,X"),
-                make_testcase(0x3F, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "RLA abs,X absolute,X",
+                },
+                testcase{
+                    .opcode = 0x3F,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -1405,15 +1875,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "RLA abs,X absolute,X with page cross"),
+                    .description = "RLA abs,X absolute,X with page cross",
+                },
             }
         },
         // 0x40
         {
             0x40,
             {
-                make_testcase(0x40, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfc,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x40,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfc,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x01fd, "rti_stack_frame")
                             .db(0x24)
@@ -1423,15 +1899,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "RTI pulls P and PC from stack"),
+                    .description = "RTI pulls P and PC from stack",
+                },
             }
         },
         // 0x41
         {
             0x41,
             {
-                make_testcase(0x41, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x41,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_ptr_base")
                         .org(0x0008, "zp_ptr")
@@ -1443,30 +1925,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "EOR (zp,X) indexed indirect with zero-page pointer-base wraparound"),
+                    .description = "EOR (zp,X) indexed indirect with zero-page pointer-base wraparound",
+                },
             }
         },
         // 0x42
         {
             0x42,
             {
-                make_testcase(0x42, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x42,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .kil_opcode(0x42)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "KIL/JAM enters JAM/KIL bus loop"),
+                    .description = "KIL/JAM enters JAM/KIL bus loop",
+                },
             }
         },
         // 0x43
         {
             0x43,
             {
-                make_testcase(0x43, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x43,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_ptr_base")
                         .org(0x0008, "zp_ptr")
@@ -1478,15 +1972,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SRE (zp,X) indexed indirect with zero-page pointer-base wraparound"),
+                    .description = "SRE (zp,X) indexed indirect with zero-page pointer-base wraparound",
+                },
             }
         },
         // 0x44
         {
             0x44,
             {
-                make_testcase(0x44, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x44,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x87)
@@ -1495,15 +1995,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP zp zero page"),
+                    .description = "NOP zp zero page",
+                },
             }
         },
         // 0x45
         {
             0x45,
             {
-                make_testcase(0x45, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x45,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x87)
@@ -1512,15 +2018,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "EOR zp zero page"),
+                    .description = "EOR zp zero page",
+                },
             }
         },
         // 0x46
         {
             0x46,
             {
-                make_testcase(0x46, 2, 0x0400, 0x0800, 0x0800, 0x81, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x46,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x82)
@@ -1529,15 +2041,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LSR zp zero page"),
+                    .description = "LSR zp zero page",
+                },
             }
         },
         // 0x47
         {
             0x47,
             {
-                make_testcase(0x47, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x47,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x82)
@@ -1546,90 +2064,126 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SRE zp zero page"),
+                    .description = "SRE zp zero page",
+                },
             }
         },
         // 0x48
         {
             0x48,
             {
-                make_testcase(0x48, 1, 0x0400, 0x0800, 0x0800, 0x8e, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x48,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x8e, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .pha()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "PHA implied"),
+                    .description = "PHA implied",
+                },
             }
         },
         // 0x49
         {
             0x49,
             {
-                make_testcase(0x49, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x49,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .eor(0xff)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "EOR #imm immediate"),
+                    .description = "EOR #imm immediate",
+                },
             }
         },
         // 0x4A
         {
             0x4A,
             {
-                make_testcase(0x4A, 1, 0x0400, 0x0800, 0x0800, 0x81, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x4A,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .lsr()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LSR A accumulator"),
+                    .description = "LSR A accumulator",
+                },
             }
         },
         // 0x4B
         {
             0x4B,
             {
-                make_testcase(0x4B, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x4B,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .alr(0xf0)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ALR #imm immediate"),
+                    .description = "ALR #imm immediate",
+                },
             }
         },
         // 0x4C
         {
             0x4C,
             {
-                make_testcase(0x4C, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x4C,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .jmp("trap")
                         .org(0x0800, "trap")
                             .jmp("trap")
                     .end().compile(),
-                    "JMP abs absolute jump"),
+                    .description = "JMP abs absolute jump",
+                },
             }
         },
         // 0x4D
         {
             0x4D,
             {
-                make_testcase(0x4D, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x4D,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .eor(absolute, "value_addr")
@@ -1638,15 +2192,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x87)
                     .end().compile(),
-                    "EOR abs absolute"),
+                    .description = "EOR abs absolute",
+                },
             }
         },
         // 0x4E
         {
             0x4E,
             {
-                make_testcase(0x4E, 3, 0x0400, 0x0800, 0x0800, 0x81, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x4E,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .lsr(absolute, "value_addr")
@@ -1655,15 +2215,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x82)
                     .end().compile(),
-                    "LSR abs absolute"),
+                    .description = "LSR abs absolute",
+                },
             }
         },
         // 0x4F
         {
             0x4F,
             {
-                make_testcase(0x4F, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x4F,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .sre(absolute, "value_addr")
@@ -1672,15 +2238,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x82)
                     .end().compile(),
-                    "SRE abs absolute"),
+                    .description = "SRE abs absolute",
+                },
             }
         },
         // 0x50
         {
             0x50,
             {
-                make_testcase(0x50, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x64, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x50,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x64, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .bvc("branch_target")
@@ -1688,33 +2260,51 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                             .jmp("trap")
                         .org(0x0420, "branch_target")
                     .end().compile(),
-                    "BVC rel not taken with a non-fallthrough encoded target"),
-                make_testcase(0x50, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "BVC rel not taken with a non-fallthrough encoded target",
+                },
+                testcase{
+                    .opcode = 0x50,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .bvc("trap")
                         .org(0x0420, "trap")
                             .jmp("trap")
                     .end().compile(),
-                    "BVC rel taken without page cross to a non-fallthrough target"),
-                make_testcase(0x50, 2, 0x04f0, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "BVC rel taken without page cross to a non-fallthrough target",
+                },
+                testcase{
+                    .opcode = 0x50,
+                    .bytes = 2,
+                    .start_at = 0x04f0,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x04f0)
                             .bvc("trap")
                         .org(0x0505, "trap")
                             .jmp("trap")
                     .end().compile(),
-                    "BVC rel taken with page cross"),
+                    .description = "BVC rel taken with page cross",
+                },
             }
         },
         // 0x51
         {
             0x51,
             {
-                make_testcase(0x51, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x51,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -1726,9 +2316,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "EOR (zp),Y indirect indexed without page cross"),
-                make_testcase(0x51, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "EOR (zp),Y indirect indexed without page cross",
+                },
+                testcase{
+                    .opcode = 0x51,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -1740,30 +2336,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "EOR (zp),Y indirect indexed with page cross"),
+                    .description = "EOR (zp),Y indirect indexed with page cross",
+                },
             }
         },
         // 0x52
         {
             0x52,
             {
-                make_testcase(0x52, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x52,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .kil_opcode(0x52)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "KIL/JAM enters JAM/KIL bus loop"),
+                    .description = "KIL/JAM enters JAM/KIL bus loop",
+                },
             }
         },
         // 0x53
         {
             0x53,
             {
-                make_testcase(0x53, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x53,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -1775,9 +2383,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SRE (zp),Y indirect indexed"),
-                make_testcase(0x53, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "SRE (zp),Y indirect indexed",
+                },
+                testcase{
+                    .opcode = 0x53,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -1789,15 +2403,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SRE (zp),Y indirect indexed with page cross"),
+                    .description = "SRE (zp),Y indirect indexed with page cross",
+                },
             }
         },
         // 0x54
         {
             0x54,
             {
-                make_testcase(0x54, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x54,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -1807,15 +2427,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP zp,X zero page,X with wraparound"),
+                    .description = "NOP zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0x55
         {
             0x55,
             {
-                make_testcase(0x55, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x55,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -1825,15 +2451,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "EOR zp,X zero page,X with wraparound"),
+                    .description = "EOR zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0x56
         {
             0x56,
             {
-                make_testcase(0x56, 2, 0x0400, 0x0800, 0x0800, 0x81, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x56,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -1843,15 +2475,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LSR zp,X zero page,X with wraparound"),
+                    .description = "LSR zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0x57
         {
             0x57,
             {
-                make_testcase(0x57, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x57,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -1861,30 +2499,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SRE zp,X zero page,X with wraparound"),
+                    .description = "SRE zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0x58
         {
             0x58,
             {
-                make_testcase(0x58, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x58,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .cli()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "CLI implied"),
+                    .description = "CLI implied",
+                },
             }
         },
         // 0x59
         {
             0x59,
             {
-                make_testcase(0x59, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x59,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -1894,9 +2544,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "EOR abs,Y absolute,Y without page cross"),
-                make_testcase(0x59, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "EOR abs,Y absolute,Y without page cross",
+                },
+                testcase{
+                    .opcode = 0x59,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -1906,30 +2562,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "EOR abs,Y absolute,Y with page cross"),
+                    .description = "EOR abs,Y absolute,Y with page cross",
+                },
             }
         },
         // 0x5A
         {
             0x5A,
             {
-                make_testcase(0x5A, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x5A,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .nop_opcode(0x5A)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP implied"),
+                    .description = "NOP implied",
+                },
             }
         },
         // 0x5B
         {
             0x5B,
             {
-                make_testcase(0x5B, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x5B,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -1939,9 +2607,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SRE abs,Y absolute,Y"),
-                make_testcase(0x5B, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "SRE abs,Y absolute,Y",
+                },
+                testcase{
+                    .opcode = 0x5B,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -1951,15 +2625,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SRE abs,Y absolute,Y with page cross"),
+                    .description = "SRE abs,Y absolute,Y with page cross",
+                },
             }
         },
         // 0x5C
         {
             0x5C,
             {
-                make_testcase(0x5C, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x5C,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -1969,9 +2649,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP abs,X absolute,X without page cross"),
-                make_testcase(0x5C, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "NOP abs,X absolute,X without page cross",
+                },
+                testcase{
+                    .opcode = 0x5C,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -1981,15 +2667,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP abs,X absolute,X with page cross"),
+                    .description = "NOP abs,X absolute,X with page cross",
+                },
             }
         },
         // 0x5D
         {
             0x5D,
             {
-                make_testcase(0x5D, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x5D,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -1999,9 +2691,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "EOR abs,X absolute,X without page cross"),
-                make_testcase(0x5D, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "EOR abs,X absolute,X without page cross",
+                },
+                testcase{
+                    .opcode = 0x5D,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -2011,15 +2709,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "EOR abs,X absolute,X with page cross"),
+                    .description = "EOR abs,X absolute,X with page cross",
+                },
             }
         },
         // 0x5E
         {
             0x5E,
             {
-                make_testcase(0x5E, 3, 0x0400, 0x0800, 0x0800, 0x81, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x5E,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -2029,9 +2733,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LSR abs,X absolute,X"),
-                make_testcase(0x5E, 3, 0x0400, 0x0800, 0x0800, 0x81, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "LSR abs,X absolute,X",
+                },
+                testcase{
+                    .opcode = 0x5E,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -2041,15 +2751,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LSR abs,X absolute,X with page cross"),
+                    .description = "LSR abs,X absolute,X with page cross",
+                },
             }
         },
         // 0x5F
         {
             0x5F,
             {
-                make_testcase(0x5F, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x5F,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -2059,9 +2775,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SRE abs,X absolute,X"),
-                make_testcase(0x5F, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "SRE abs,X absolute,X",
+                },
+                testcase{
+                    .opcode = 0x5F,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -2071,15 +2793,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SRE abs,X absolute,X with page cross"),
+                    .description = "SRE abs,X absolute,X with page cross",
+                },
             }
         },
         // 0x60
         {
             0x60,
             {
-                make_testcase(0x60, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x60,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x01fe, "rts_return_address")
                             .dw(sym("trap", -1))
@@ -2088,15 +2816,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "RTS pulls return address from stack"),
+                    .description = "RTS pulls return address from stack",
+                },
             }
         },
         // 0x61
         {
             0x61,
             {
-                make_testcase(0x61, 2, 0x0400, 0x0800, 0x0800, 0x45, 0x10, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x61,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x10, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_ptr_base")
                         .org(0x0008, "zp_ptr")
@@ -2108,30 +2842,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ADC (zp,X) indexed indirect with zero-page pointer-base wraparound"),
+                    .description = "ADC (zp,X) indexed indirect with zero-page pointer-base wraparound",
+                },
             }
         },
         // 0x62
         {
             0x62,
             {
-                make_testcase(0x62, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x62,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .kil_opcode(0x62)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "KIL/JAM enters JAM/KIL bus loop"),
+                    .description = "KIL/JAM enters JAM/KIL bus loop",
+                },
             }
         },
         // 0x63
         {
             0x63,
             {
-                make_testcase(0x63, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x63,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_ptr_base")
                         .org(0x0008, "zp_ptr")
@@ -2143,15 +2889,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "RRA (zp,X) indexed indirect with zero-page pointer-base wraparound"),
+                    .description = "RRA (zp,X) indexed indirect with zero-page pointer-base wraparound",
+                },
             }
         },
         // 0x64
         {
             0x64,
             {
-                make_testcase(0x64, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x64,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x87)
@@ -2160,15 +2912,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP zp zero page"),
+                    .description = "NOP zp zero page",
+                },
             }
         },
         // 0x65
         {
             0x65,
             {
-                make_testcase(0x65, 2, 0x0400, 0x0800, 0x0800, 0x45, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x65,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x15)
@@ -2177,15 +2935,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ADC zp zero page"),
+                    .description = "ADC zp zero page",
+                },
             }
         },
         // 0x66
         {
             0x66,
             {
-                make_testcase(0x66, 2, 0x0400, 0x0800, 0x0800, 0x81, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x66,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x81)
@@ -2194,15 +2958,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ROR zp zero page"),
+                    .description = "ROR zp zero page",
+                },
             }
         },
         // 0x67
         {
             0x67,
             {
-                make_testcase(0x67, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x67,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x81)
@@ -2211,15 +2981,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "RRA zp zero page"),
+                    .description = "RRA zp zero page",
+                },
             }
         },
         // 0x68
         {
             0x68,
             {
-                make_testcase(0x68, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x68,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x01fe, "stack_value")
                             .db(0x5a)
@@ -2228,69 +3004,99 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "PLA pulls value from stack"),
+                    .description = "PLA pulls value from stack",
+                },
             }
         },
         // 0x69
         {
             0x69,
             {
-                make_testcase(0x69, 2, 0x0400, 0x0800, 0x0800, 0x45, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x69,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .adc(0x15)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ADC #imm immediate"),
-                make_testcase(0x69, 2, 0x0400, 0x0800, 0x0800, 0x45, 0x00, 0x00, 0x2d, 0xfd,
-                    Asm6502::New()
+                    .description = "ADC #imm immediate",
+                },
+                testcase{
+                    .opcode = 0x69,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x00, .Y = 0x00, .P = 0x2d, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .adc(0x38)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ADC #imm decimal mode immediate"),
+                    .description = "ADC #imm decimal mode immediate",
+                },
             }
         },
         // 0x6A
         {
             0x6A,
             {
-                make_testcase(0x6A, 1, 0x0400, 0x0800, 0x0800, 0x81, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x6A,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .ror()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ROR A accumulator"),
+                    .description = "ROR A accumulator",
+                },
             }
         },
         // 0x6B
         {
             0x6B,
             {
-                make_testcase(0x6B, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x6B,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .arr(0x6e)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ARR #imm immediate"),
+                    .description = "ARR #imm immediate",
+                },
             }
         },
         // 0x6C
         {
             0x6C,
             {
-                make_testcase(0x6C, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x6C,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0200, "jump_ptr")
                             .dw("trap")
@@ -2299,9 +3105,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x0800, "trap")
                             .jmp("trap")
                     .end().compile(),
-                    "JMP (abs) indirect jump"),
-                make_testcase(0x6C, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "JMP (abs) indirect jump",
+                },
+                testcase{
+                    .opcode = 0x6C,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0200, "jump_ptr_high_byte")
                             .db(0x08)
@@ -2312,15 +3124,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x0834, "trap")
                             .jmp("trap")
                     .end().compile(),
-                    "JMP (abs) NMOS indirect pointer high-byte wraps at $xxFF"),
+                    .description = "JMP (abs) NMOS indirect pointer high-byte wraps at $xxFF",
+                },
             }
         },
         // 0x6D
         {
             0x6D,
             {
-                make_testcase(0x6D, 3, 0x0400, 0x0800, 0x0800, 0x45, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x6D,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .adc(absolute, "value_addr")
@@ -2329,15 +3147,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x15)
                     .end().compile(),
-                    "ADC abs absolute"),
+                    .description = "ADC abs absolute",
+                },
             }
         },
         // 0x6E
         {
             0x6E,
             {
-                make_testcase(0x6E, 3, 0x0400, 0x0800, 0x0800, 0x81, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x6E,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .ror(absolute, "value_addr")
@@ -2346,15 +3170,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x81)
                     .end().compile(),
-                    "ROR abs absolute"),
+                    .description = "ROR abs absolute",
+                },
             }
         },
         // 0x6F
         {
             0x6F,
             {
-                make_testcase(0x6F, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x6F,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .rra(absolute, "value_addr")
@@ -2363,15 +3193,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x81)
                     .end().compile(),
-                    "RRA abs absolute"),
+                    .description = "RRA abs absolute",
+                },
             }
         },
         // 0x70
         {
             0x70,
             {
-                make_testcase(0x70, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x70,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .bvs("branch_target")
@@ -2379,33 +3215,51 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                             .jmp("trap")
                         .org(0x0420, "branch_target")
                     .end().compile(),
-                    "BVS rel not taken with a non-fallthrough encoded target"),
-                make_testcase(0x70, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x64, 0xfd,
-                    Asm6502::New()
+                    .description = "BVS rel not taken with a non-fallthrough encoded target",
+                },
+                testcase{
+                    .opcode = 0x70,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x64, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .bvs("trap")
                         .org(0x0420, "trap")
                             .jmp("trap")
                     .end().compile(),
-                    "BVS rel taken without page cross to a non-fallthrough target"),
-                make_testcase(0x70, 2, 0x04f0, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x64, 0xfd,
-                    Asm6502::New()
+                    .description = "BVS rel taken without page cross to a non-fallthrough target",
+                },
+                testcase{
+                    .opcode = 0x70,
+                    .bytes = 2,
+                    .start_at = 0x04f0,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x64, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x04f0)
                             .bvs("trap")
                         .org(0x0505, "trap")
                             .jmp("trap")
                     .end().compile(),
-                    "BVS rel taken with page cross"),
+                    .description = "BVS rel taken with page cross",
+                },
             }
         },
         // 0x71
         {
             0x71,
             {
-                make_testcase(0x71, 2, 0x0400, 0x0800, 0x0800, 0x45, 0x00, 0x10, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x71,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x00, .Y = 0x10, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -2417,9 +3271,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ADC (zp),Y indirect indexed without page cross"),
-                make_testcase(0x71, 2, 0x0400, 0x0800, 0x0800, 0x45, 0x00, 0x20, 0x25, 0xfd,
-                    Asm6502::New()
+                    .description = "ADC (zp),Y indirect indexed without page cross",
+                },
+                testcase{
+                    .opcode = 0x71,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x00, .Y = 0x20, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -2431,30 +3291,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ADC (zp),Y indirect indexed with page cross"),
+                    .description = "ADC (zp),Y indirect indexed with page cross",
+                },
             }
         },
         // 0x72
         {
             0x72,
             {
-                make_testcase(0x72, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x72,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .kil_opcode(0x72)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "KIL/JAM enters JAM/KIL bus loop"),
+                    .description = "KIL/JAM enters JAM/KIL bus loop",
+                },
             }
         },
         // 0x73
         {
             0x73,
             {
-                make_testcase(0x73, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x10, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x73,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x10, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -2466,9 +3338,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "RRA (zp),Y indirect indexed"),
-                make_testcase(0x73, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "RRA (zp),Y indirect indexed",
+                },
+                testcase{
+                    .opcode = 0x73,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -2480,15 +3358,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "RRA (zp),Y indirect indexed with page cross"),
+                    .description = "RRA (zp),Y indirect indexed with page cross",
+                },
             }
         },
         // 0x74
         {
             0x74,
             {
-                make_testcase(0x74, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x74,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -2498,15 +3382,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP zp,X zero page,X with wraparound"),
+                    .description = "NOP zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0x75
         {
             0x75,
             {
-                make_testcase(0x75, 2, 0x0400, 0x0800, 0x0800, 0x45, 0x10, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x75,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x10, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -2516,15 +3406,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ADC zp,X zero page,X with wraparound"),
+                    .description = "ADC zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0x76
         {
             0x76,
             {
-                make_testcase(0x76, 2, 0x0400, 0x0800, 0x0800, 0x81, 0x10, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x76,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x10, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -2534,15 +3430,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ROR zp,X zero page,X with wraparound"),
+                    .description = "ROR zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0x77
         {
             0x77,
             {
-                make_testcase(0x77, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x77,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -2552,30 +3454,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "RRA zp,X zero page,X with wraparound"),
+                    .description = "RRA zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0x78
         {
             0x78,
             {
-                make_testcase(0x78, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x78,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .sei()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SEI implied"),
+                    .description = "SEI implied",
+                },
             }
         },
         // 0x79
         {
             0x79,
             {
-                make_testcase(0x79, 3, 0x0400, 0x0800, 0x0800, 0x45, 0x00, 0x10, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x79,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x00, .Y = 0x10, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -2585,9 +3499,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ADC abs,Y absolute,Y without page cross"),
-                make_testcase(0x79, 3, 0x0400, 0x0800, 0x0800, 0x45, 0x00, 0x20, 0x25, 0xfd,
-                    Asm6502::New()
+                    .description = "ADC abs,Y absolute,Y without page cross",
+                },
+                testcase{
+                    .opcode = 0x79,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x00, .Y = 0x20, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -2597,30 +3517,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ADC abs,Y absolute,Y with page cross"),
+                    .description = "ADC abs,Y absolute,Y with page cross",
+                },
             }
         },
         // 0x7A
         {
             0x7A,
             {
-                make_testcase(0x7A, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x7A,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .nop_opcode(0x7A)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP implied"),
+                    .description = "NOP implied",
+                },
             }
         },
         // 0x7B
         {
             0x7B,
             {
-                make_testcase(0x7B, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x10, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x7B,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x10, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -2630,9 +3562,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "RRA abs,Y absolute,Y"),
-                make_testcase(0x7B, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "RRA abs,Y absolute,Y",
+                },
+                testcase{
+                    .opcode = 0x7B,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -2642,15 +3580,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "RRA abs,Y absolute,Y with page cross"),
+                    .description = "RRA abs,Y absolute,Y with page cross",
+                },
             }
         },
         // 0x7C
         {
             0x7C,
             {
-                make_testcase(0x7C, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x7C,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -2660,9 +3604,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP abs,X absolute,X without page cross"),
-                make_testcase(0x7C, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "NOP abs,X absolute,X without page cross",
+                },
+                testcase{
+                    .opcode = 0x7C,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -2672,15 +3622,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP abs,X absolute,X with page cross"),
+                    .description = "NOP abs,X absolute,X with page cross",
+                },
             }
         },
         // 0x7D
         {
             0x7D,
             {
-                make_testcase(0x7D, 3, 0x0400, 0x0800, 0x0800, 0x45, 0x10, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x7D,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x10, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -2690,9 +3646,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ADC abs,X absolute,X without page cross"),
-                make_testcase(0x7D, 3, 0x0400, 0x0800, 0x0800, 0x45, 0x20, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                    .description = "ADC abs,X absolute,X without page cross",
+                },
+                testcase{
+                    .opcode = 0x7D,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x20, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -2702,15 +3664,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ADC abs,X absolute,X with page cross"),
+                    .description = "ADC abs,X absolute,X with page cross",
+                },
             }
         },
         // 0x7E
         {
             0x7E,
             {
-                make_testcase(0x7E, 3, 0x0400, 0x0800, 0x0800, 0x81, 0x10, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x7E,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x10, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -2720,9 +3688,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ROR abs,X absolute,X"),
-                make_testcase(0x7E, 3, 0x0400, 0x0800, 0x0800, 0x81, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "ROR abs,X absolute,X",
+                },
+                testcase{
+                    .opcode = 0x7E,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x81, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -2732,15 +3706,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ROR abs,X absolute,X with page cross"),
+                    .description = "ROR abs,X absolute,X with page cross",
+                },
             }
         },
         // 0x7F
         {
             0x7F,
             {
-                make_testcase(0x7F, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x7F,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -2750,9 +3730,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "RRA abs,X absolute,X"),
-                make_testcase(0x7F, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "RRA abs,X absolute,X",
+                },
+                testcase{
+                    .opcode = 0x7F,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -2762,30 +3748,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "RRA abs,X absolute,X with page cross"),
+                    .description = "RRA abs,X absolute,X with page cross",
+                },
             }
         },
         // 0x80
         {
             0x80,
             {
-                make_testcase(0x80, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x80,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .nop_opcode(0x80, 0x7f)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP #imm immediate"),
+                    .description = "NOP #imm immediate",
+                },
             }
         },
         // 0x81
         {
             0x81,
             {
-                make_testcase(0x81, 2, 0x0400, 0x0800, 0x0800, 0x5a, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x81,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x5a, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_ptr_base")
                         .org(0x0008, "zp_ptr")
@@ -2796,30 +3794,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "STA (zp,X) indexed indirect with zero-page pointer-base wraparound"),
+                    .description = "STA (zp,X) indexed indirect with zero-page pointer-base wraparound",
+                },
             }
         },
         // 0x82
         {
             0x82,
             {
-                make_testcase(0x82, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x82,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .nop_opcode(0x82, 0x7f)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP #imm immediate"),
+                    .description = "NOP #imm immediate",
+                },
             }
         },
         // 0x83
         {
             0x83,
             {
-                make_testcase(0x83, 2, 0x0400, 0x0800, 0x0800, 0xf3, 0x10, 0x00, 0x24, 0x9a,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x83,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xf3, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0x9a,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_ptr_base")
                         .org(0x0008, "zp_ptr")
@@ -2830,15 +3840,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SAX (zp,X) indexed indirect with zero-page pointer-base wraparound"),
+                    .description = "SAX (zp,X) indexed indirect with zero-page pointer-base wraparound",
+                },
             }
         },
         // 0x84
         {
             0x84,
             {
-                make_testcase(0x84, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x7e, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x84,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x7e, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "store_zp")
                         .org(0x0400)
@@ -2846,15 +3862,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "STY zp zero page"),
+                    .description = "STY zp zero page",
+                },
             }
         },
         // 0x85
         {
             0x85,
             {
-                make_testcase(0x85, 2, 0x0400, 0x0800, 0x0800, 0x5a, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x85,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x5a, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "store_zp")
                         .org(0x0400)
@@ -2862,15 +3884,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "STA zp zero page"),
+                    .description = "STA zp zero page",
+                },
             }
         },
         // 0x86
         {
             0x86,
             {
-                make_testcase(0x86, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x3c, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x86,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x3c, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "store_zp")
                         .org(0x0400)
@@ -2878,15 +3906,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "STX zp zero page"),
+                    .description = "STX zp zero page",
+                },
             }
         },
         // 0x87
         {
             0x87,
             {
-                make_testcase(0x87, 2, 0x0400, 0x0800, 0x0800, 0xf3, 0xcc, 0x00, 0x24, 0x9a,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x87,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xf3, .X = 0xcc, .Y = 0x00, .P = 0x24, .S = 0x9a,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "store_zp")
                         .org(0x0400)
@@ -2894,75 +3928,105 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SAX zp zero page"),
+                    .description = "SAX zp zero page",
+                },
             }
         },
         // 0x88
         {
             0x88,
             {
-                make_testcase(0x88, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x88,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .dey()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "DEY implied"),
+                    .description = "DEY implied",
+                },
             }
         },
         // 0x89
         {
             0x89,
             {
-                make_testcase(0x89, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x89,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .nop_opcode(0x89, 0x7f)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP #imm immediate"),
+                    .description = "NOP #imm immediate",
+                },
             }
         },
         // 0x8A
         {
             0x8A,
             {
-                make_testcase(0x8A, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x7c, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x8A,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x7c, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .txa()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "TXA implied"),
+                    .description = "TXA implied",
+                },
             }
         },
         // 0x8B
         {
             0x8B,
             {
-                make_testcase(0x8B, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x8B,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .xaa(0xee)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "XAA #imm immediate"),
+                    .description = "XAA #imm immediate",
+                },
             }
         },
         // 0x8C
         {
             0x8C,
             {
-                make_testcase(0x8C, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x7e, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x8C,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x7e, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .sty(absolute, "store_addr")
@@ -2970,15 +4034,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                             .jmp("trap")
                         .org(0x2134, "store_addr")
                     .end().compile(),
-                    "STY abs absolute"),
+                    .description = "STY abs absolute",
+                },
             }
         },
         // 0x8D
         {
             0x8D,
             {
-                make_testcase(0x8D, 3, 0x0400, 0x0800, 0x0800, 0x5a, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x8D,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x5a, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .sta(absolute, "store_addr")
@@ -2986,15 +4056,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                             .jmp("trap")
                         .org(0x2134, "store_addr")
                     .end().compile(),
-                    "STA abs absolute"),
+                    .description = "STA abs absolute",
+                },
             }
         },
         // 0x8E
         {
             0x8E,
             {
-                make_testcase(0x8E, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x3c, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x8E,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x3c, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .stx(absolute, "store_addr")
@@ -3002,15 +4078,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                             .jmp("trap")
                         .org(0x2134, "store_addr")
                     .end().compile(),
-                    "STX abs absolute"),
+                    .description = "STX abs absolute",
+                },
             }
         },
         // 0x8F
         {
             0x8F,
             {
-                make_testcase(0x8F, 3, 0x0400, 0x0800, 0x0800, 0xf3, 0xcc, 0x00, 0x24, 0x9a,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x8F,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xf3, .X = 0xcc, .Y = 0x00, .P = 0x24, .S = 0x9a,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .sax(absolute, "store_addr")
@@ -3018,15 +4100,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                             .jmp("trap")
                         .org(0x2134, "store_addr")
                     .end().compile(),
-                    "SAX abs absolute"),
+                    .description = "SAX abs absolute",
+                },
             }
         },
         // 0x90
         {
             0x90,
             {
-                make_testcase(0x90, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x90,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .bcc("branch_target")
@@ -3034,33 +4122,51 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                             .jmp("trap")
                         .org(0x0420, "branch_target")
                     .end().compile(),
-                    "BCC rel not taken with a non-fallthrough encoded target"),
-                make_testcase(0x90, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "BCC rel not taken with a non-fallthrough encoded target",
+                },
+                testcase{
+                    .opcode = 0x90,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .bcc("trap")
                         .org(0x0420, "trap")
                             .jmp("trap")
                     .end().compile(),
-                    "BCC rel taken without page cross to a non-fallthrough target"),
-                make_testcase(0x90, 2, 0x04f0, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "BCC rel taken without page cross to a non-fallthrough target",
+                },
+                testcase{
+                    .opcode = 0x90,
+                    .bytes = 2,
+                    .start_at = 0x04f0,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x04f0)
                             .bcc("trap")
                         .org(0x0505, "trap")
                             .jmp("trap")
                     .end().compile(),
-                    "BCC rel taken with page cross"),
+                    .description = "BCC rel taken with page cross",
+                },
             }
         },
         // 0x91
         {
             0x91,
             {
-                make_testcase(0x91, 2, 0x0400, 0x0800, 0x0800, 0x5a, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x91,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x5a, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -3071,9 +4177,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "STA (zp),Y indirect indexed"),
-                make_testcase(0x91, 2, 0x0400, 0x0800, 0x0800, 0x5a, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "STA (zp),Y indirect indexed",
+                },
+                testcase{
+                    .opcode = 0x91,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x5a, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -3084,30 +4196,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "STA (zp),Y indirect indexed with page cross"),
+                    .description = "STA (zp),Y indirect indexed with page cross",
+                },
             }
         },
         // 0x92
         {
             0x92,
             {
-                make_testcase(0x92, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x92,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .kil_opcode(0x92)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "KIL/JAM enters JAM/KIL bus loop"),
+                    .description = "KIL/JAM enters JAM/KIL bus loop",
+                },
             }
         },
         // 0x93
         {
             0x93,
             {
-                make_testcase(0x93, 2, 0x0400, 0x0800, 0x0800, 0xf3, 0xcc, 0x10, 0x24, 0x9a,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x93,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xf3, .X = 0xcc, .Y = 0x10, .P = 0x24, .S = 0x9a,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -3118,9 +4242,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "AHX (zp),Y unstable indirect indexed store with page cross"),
-                make_testcase(0x93, 2, 0x0400, 0x0800, 0x0800, 0xf3, 0xcc, 0x10, 0x24, 0x9a,
-                    Asm6502::New()
+                    .description = "AHX (zp),Y unstable indirect indexed store with page cross",
+                },
+                testcase{
+                    .opcode = 0x93,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xf3, .X = 0xcc, .Y = 0x10, .P = 0x24, .S = 0x9a,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -3131,15 +4261,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "AHX (zp),Y unstable indirect indexed without page cross"),
+                    .description = "AHX (zp),Y unstable indirect indexed without page cross",
+                },
             }
         },
         // 0x94
         {
             0x94,
             {
-                make_testcase(0x94, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x7e, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x94,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x7e, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "store_zp")
@@ -3148,15 +4284,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "STY zp,X zero page,X with wraparound"),
+                    .description = "STY zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0x95
         {
             0x95,
             {
-                make_testcase(0x95, 2, 0x0400, 0x0800, 0x0800, 0x5a, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x95,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x5a, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "store_zp")
@@ -3165,15 +4307,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "STA zp,X zero page,X with wraparound"),
+                    .description = "STA zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0x96
         {
             0x96,
             {
-                make_testcase(0x96, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x3c, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x96,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x3c, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "store_zp")
@@ -3182,15 +4330,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "STX zp,Y zero page,Y with wraparound"),
+                    .description = "STX zp,Y zero page,Y with wraparound",
+                },
             }
         },
         // 0x97
         {
             0x97,
             {
-                make_testcase(0x97, 2, 0x0400, 0x0800, 0x0800, 0xf3, 0xcc, 0x10, 0x24, 0x9a,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x97,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xf3, .X = 0xcc, .Y = 0x10, .P = 0x24, .S = 0x9a,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "store_zp")
@@ -3199,30 +4353,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SAX zp,Y zero page,Y with wraparound"),
+                    .description = "SAX zp,Y zero page,Y with wraparound",
+                },
             }
         },
         // 0x98
         {
             0x98,
             {
-                make_testcase(0x98, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x6d, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x98,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x6d, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .tya()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "TYA implied"),
+                    .description = "TYA implied",
+                },
             }
         },
         // 0x99
         {
             0x99,
             {
-                make_testcase(0x99, 3, 0x0400, 0x0800, 0x0800, 0x5a, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x99,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x5a, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "store_addr")
@@ -3231,9 +4397,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "STA abs,Y absolute,Y"),
-                make_testcase(0x99, 3, 0x0400, 0x0800, 0x0800, 0x5a, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "STA abs,Y absolute,Y",
+                },
+                testcase{
+                    .opcode = 0x99,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x5a, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "store_addr")
@@ -3242,30 +4414,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "STA abs,Y absolute,Y with page cross"),
+                    .description = "STA abs,Y absolute,Y with page cross",
+                },
             }
         },
         // 0x9A
         {
             0x9A,
             {
-                make_testcase(0x9A, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x7c, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x9A,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x7c, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .txs()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "TXS implied"),
+                    .description = "TXS implied",
+                },
             }
         },
         // 0x9B
         {
             0x9B,
             {
-                make_testcase(0x9B, 3, 0x0400, 0x0800, 0x0800, 0xf3, 0xcc, 0x10, 0x24, 0x9a,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x9B,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xf3, .X = 0xcc, .Y = 0x10, .P = 0x24, .S = 0x9a,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "store_addr")
@@ -3274,9 +4458,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "TAS abs,Y unstable absolute,Y store with page cross"),
-                make_testcase(0x9B, 3, 0x0400, 0x0800, 0x0800, 0xf3, 0xcc, 0x10, 0x24, 0x9a,
-                    Asm6502::New()
+                    .description = "TAS abs,Y unstable absolute,Y store with page cross",
+                },
+                testcase{
+                    .opcode = 0x9B,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xf3, .X = 0xcc, .Y = 0x10, .P = 0x24, .S = 0x9a,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "store_addr")
@@ -3285,15 +4475,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "TAS abs,Y unstable absolute,Y store without page cross"),
+                    .description = "TAS abs,Y unstable absolute,Y store without page cross",
+                },
             }
         },
         // 0x9C
         {
             0x9C,
             {
-                make_testcase(0x9C, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0xcf, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x9C,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0xcf, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "store_addr")
@@ -3302,9 +4498,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SHY abs,X unstable absolute,X store with page cross"),
-                make_testcase(0x9C, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0xcf, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "SHY abs,X unstable absolute,X store with page cross",
+                },
+                testcase{
+                    .opcode = 0x9C,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0xcf, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "store_addr")
@@ -3313,15 +4515,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SHY abs,X unstable absolute,X store without page cross"),
+                    .description = "SHY abs,X unstable absolute,X store without page cross",
+                },
             }
         },
         // 0x9D
         {
             0x9D,
             {
-                make_testcase(0x9D, 3, 0x0400, 0x0800, 0x0800, 0x5a, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x9D,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x5a, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "store_addr")
@@ -3330,9 +4538,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "STA abs,X absolute,X"),
-                make_testcase(0x9D, 3, 0x0400, 0x0800, 0x0800, 0x5a, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "STA abs,X absolute,X",
+                },
+                testcase{
+                    .opcode = 0x9D,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x5a, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "store_addr")
@@ -3341,15 +4555,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "STA abs,X absolute,X with page cross"),
+                    .description = "STA abs,X absolute,X with page cross",
+                },
             }
         },
         // 0x9E
         {
             0x9E,
             {
-                make_testcase(0x9E, 3, 0x0400, 0x0800, 0x0800, 0x42, 0xcf, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x9E,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0xcf, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "store_addr")
@@ -3358,9 +4578,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SHX abs,Y unstable absolute,Y store with page cross"),
-                make_testcase(0x9E, 3, 0x0400, 0x0800, 0x0800, 0x42, 0xcf, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "SHX abs,Y unstable absolute,Y store with page cross",
+                },
+                testcase{
+                    .opcode = 0x9E,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0xcf, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "store_addr")
@@ -3369,15 +4595,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SHX abs,Y unstable absolute,Y store without page cross"),
+                    .description = "SHX abs,Y unstable absolute,Y store without page cross",
+                },
             }
         },
         // 0x9F
         {
             0x9F,
             {
-                make_testcase(0x9F, 3, 0x0400, 0x0800, 0x0800, 0xf3, 0xcc, 0x10, 0x24, 0x9a,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0x9F,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xf3, .X = 0xcc, .Y = 0x10, .P = 0x24, .S = 0x9a,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "store_addr")
@@ -3386,9 +4618,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "AHX abs,Y unstable absolute,Y store with page cross"),
-                make_testcase(0x9F, 3, 0x0400, 0x0800, 0x0800, 0xf3, 0xcc, 0x10, 0x24, 0x9a,
-                    Asm6502::New()
+                    .description = "AHX abs,Y unstable absolute,Y store with page cross",
+                },
+                testcase{
+                    .opcode = 0x9F,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xf3, .X = 0xcc, .Y = 0x10, .P = 0x24, .S = 0x9a,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "store_addr")
@@ -3397,30 +4635,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "AHX abs,Y unstable absolute,Y store without page cross"),
+                    .description = "AHX abs,Y unstable absolute,Y store without page cross",
+                },
             }
         },
         // 0xA0
         {
             0xA0,
             {
-                make_testcase(0xA0, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xA0,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .ldy(0x6d)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LDY #imm immediate"),
+                    .description = "LDY #imm immediate",
+                },
             }
         },
         // 0xA1
         {
             0xA1,
             {
-                make_testcase(0xA1, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xA1,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_ptr_base")
                         .org(0x0008, "zp_ptr")
@@ -3432,30 +4682,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LDA (zp,X) indexed indirect with zero-page pointer-base wraparound"),
+                    .description = "LDA (zp,X) indexed indirect with zero-page pointer-base wraparound",
+                },
             }
         },
         // 0xA2
         {
             0xA2,
             {
-                make_testcase(0xA2, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xA2,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .ldx(0x7c)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LDX #imm immediate"),
+                    .description = "LDX #imm immediate",
+                },
             }
         },
         // 0xA3
         {
             0xA3,
             {
-                make_testcase(0xA3, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xA3,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_ptr_base")
                         .org(0x0008, "zp_ptr")
@@ -3467,15 +4729,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LAX (zp,X) indexed indirect with zero-page pointer-base wraparound"),
+                    .description = "LAX (zp,X) indexed indirect with zero-page pointer-base wraparound",
+                },
             }
         },
         // 0xA4
         {
             0xA4,
             {
-                make_testcase(0xA4, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xA4,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x8e)
@@ -3484,15 +4752,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LDY zp zero page"),
+                    .description = "LDY zp zero page",
+                },
             }
         },
         // 0xA5
         {
             0xA5,
             {
-                make_testcase(0xA5, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xA5,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x8e)
@@ -3501,15 +4775,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LDA zp zero page"),
+                    .description = "LDA zp zero page",
+                },
             }
         },
         // 0xA6
         {
             0xA6,
             {
-                make_testcase(0xA6, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xA6,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x8e)
@@ -3518,15 +4798,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LDX zp zero page"),
+                    .description = "LDX zp zero page",
+                },
             }
         },
         // 0xA7
         {
             0xA7,
             {
-                make_testcase(0xA7, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xA7,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x8e)
@@ -3535,75 +4821,105 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LAX zp zero page"),
+                    .description = "LAX zp zero page",
+                },
             }
         },
         // 0xA8
         {
             0xA8,
             {
-                make_testcase(0xA8, 1, 0x0400, 0x0800, 0x0800, 0x8e, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xA8,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x8e, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .tay()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "TAY implied"),
+                    .description = "TAY implied",
+                },
             }
         },
         // 0xA9
         {
             0xA9,
             {
-                make_testcase(0xA9, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xA9,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .lda(0x8e)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LDA #imm immediate"),
+                    .description = "LDA #imm immediate",
+                },
             }
         },
         // 0xAA
         {
             0xAA,
             {
-                make_testcase(0xAA, 1, 0x0400, 0x0800, 0x0800, 0x8e, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xAA,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x8e, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .tax()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "TAX implied"),
+                    .description = "TAX implied",
+                },
             }
         },
         // 0xAB
         {
             0xAB,
             {
-                make_testcase(0xAB, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xAB,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .lxa(0xf3)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LXA #imm immediate"),
+                    .description = "LXA #imm immediate",
+                },
             }
         },
         // 0xAC
         {
             0xAC,
             {
-                make_testcase(0xAC, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xAC,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .ldy(absolute, "value_addr")
@@ -3612,15 +4928,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x8e)
                     .end().compile(),
-                    "LDY abs absolute"),
+                    .description = "LDY abs absolute",
+                },
             }
         },
         // 0xAD
         {
             0xAD,
             {
-                make_testcase(0xAD, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xAD,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .lda(absolute, "value_addr")
@@ -3629,15 +4951,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x8e)
                     .end().compile(),
-                    "LDA abs absolute"),
+                    .description = "LDA abs absolute",
+                },
             }
         },
         // 0xAE
         {
             0xAE,
             {
-                make_testcase(0xAE, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xAE,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .ldx(absolute, "value_addr")
@@ -3646,15 +4974,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x8e)
                     .end().compile(),
-                    "LDX abs absolute"),
+                    .description = "LDX abs absolute",
+                },
             }
         },
         // 0xAF
         {
             0xAF,
             {
-                make_testcase(0xAF, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xAF,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .lax(absolute, "value_addr")
@@ -3663,15 +4997,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x8e)
                     .end().compile(),
-                    "LAX abs absolute"),
+                    .description = "LAX abs absolute",
+                },
             }
         },
         // 0xB0
         {
             0xB0,
             {
-                make_testcase(0xB0, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xB0,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .bcs("branch_target")
@@ -3679,33 +5019,51 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                             .jmp("trap")
                         .org(0x0420, "branch_target")
                     .end().compile(),
-                    "BCS rel not taken with a non-fallthrough encoded target"),
-                make_testcase(0xB0, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                    .description = "BCS rel not taken with a non-fallthrough encoded target",
+                },
+                testcase{
+                    .opcode = 0xB0,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .bcs("trap")
                         .org(0x0420, "trap")
                             .jmp("trap")
                     .end().compile(),
-                    "BCS rel taken without page cross to a non-fallthrough target"),
-                make_testcase(0xB0, 2, 0x04f0, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                    .description = "BCS rel taken without page cross to a non-fallthrough target",
+                },
+                testcase{
+                    .opcode = 0xB0,
+                    .bytes = 2,
+                    .start_at = 0x04f0,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x04f0)
                             .bcs("trap")
                         .org(0x0505, "trap")
                             .jmp("trap")
                     .end().compile(),
-                    "BCS rel taken with page cross"),
+                    .description = "BCS rel taken with page cross",
+                },
             }
         },
         // 0xB1
         {
             0xB1,
             {
-                make_testcase(0xB1, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xB1,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -3717,9 +5075,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LDA (zp),Y indirect indexed without page cross"),
-                make_testcase(0xB1, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "LDA (zp),Y indirect indexed without page cross",
+                },
+                testcase{
+                    .opcode = 0xB1,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -3731,30 +5095,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LDA (zp),Y indirect indexed with page cross"),
+                    .description = "LDA (zp),Y indirect indexed with page cross",
+                },
             }
         },
         // 0xB2
         {
             0xB2,
             {
-                make_testcase(0xB2, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xB2,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .kil_opcode(0xB2)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "KIL/JAM enters JAM/KIL bus loop"),
+                    .description = "KIL/JAM enters JAM/KIL bus loop",
+                },
             }
         },
         // 0xB3
         {
             0xB3,
             {
-                make_testcase(0xB3, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xB3,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -3766,9 +5142,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LAX (zp),Y indirect indexed without page cross"),
-                make_testcase(0xB3, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "LAX (zp),Y indirect indexed without page cross",
+                },
+                testcase{
+                    .opcode = 0xB3,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -3780,15 +5162,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LAX (zp),Y indirect indexed with page cross"),
+                    .description = "LAX (zp),Y indirect indexed with page cross",
+                },
             }
         },
         // 0xB4
         {
             0xB4,
             {
-                make_testcase(0xB4, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xB4,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -3798,15 +5186,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LDY zp,X zero page,X with wraparound"),
+                    .description = "LDY zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0xB5
         {
             0xB5,
             {
-                make_testcase(0xB5, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xB5,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -3816,15 +5210,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LDA zp,X zero page,X with wraparound"),
+                    .description = "LDA zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0xB6
         {
             0xB6,
             {
-                make_testcase(0xB6, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xB6,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -3834,15 +5234,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LDX zp,Y zero page,Y with wraparound"),
+                    .description = "LDX zp,Y zero page,Y with wraparound",
+                },
             }
         },
         // 0xB7
         {
             0xB7,
             {
-                make_testcase(0xB7, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xB7,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -3852,30 +5258,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LAX zp,Y zero page,Y with wraparound"),
+                    .description = "LAX zp,Y zero page,Y with wraparound",
+                },
             }
         },
         // 0xB8
         {
             0xB8,
             {
-                make_testcase(0xB8, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xB8,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .clv()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "CLV implied"),
+                    .description = "CLV implied",
+                },
             }
         },
         // 0xB9
         {
             0xB9,
             {
-                make_testcase(0xB9, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xB9,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -3885,9 +5303,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LDA abs,Y absolute,Y without page cross"),
-                make_testcase(0xB9, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "LDA abs,Y absolute,Y without page cross",
+                },
+                testcase{
+                    .opcode = 0xB9,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -3897,30 +5321,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LDA abs,Y absolute,Y with page cross"),
+                    .description = "LDA abs,Y absolute,Y with page cross",
+                },
             }
         },
         // 0xBA
         {
             0xBA,
             {
-                make_testcase(0xBA, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0x7b,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xBA,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0x7b,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .tsx()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "TSX implied"),
+                    .description = "TSX implied",
+                },
             }
         },
         // 0xBB
         {
             0xBB,
             {
-                make_testcase(0xBB, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x10, 0x24, 0xf3,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xBB,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xf3,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -3930,9 +5366,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LAS abs,Y absolute,Y without page cross"),
-                make_testcase(0xBB, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x20, 0x24, 0xf3,
-                    Asm6502::New()
+                    .description = "LAS abs,Y absolute,Y without page cross",
+                },
+                testcase{
+                    .opcode = 0xBB,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xf3,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -3942,15 +5384,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LAS abs,Y absolute,Y with page cross"),
+                    .description = "LAS abs,Y absolute,Y with page cross",
+                },
             }
         },
         // 0xBC
         {
             0xBC,
             {
-                make_testcase(0xBC, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xBC,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -3960,9 +5408,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LDY abs,X absolute,X without page cross"),
-                make_testcase(0xBC, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "LDY abs,X absolute,X without page cross",
+                },
+                testcase{
+                    .opcode = 0xBC,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -3972,15 +5426,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LDY abs,X absolute,X with page cross"),
+                    .description = "LDY abs,X absolute,X with page cross",
+                },
             }
         },
         // 0xBD
         {
             0xBD,
             {
-                make_testcase(0xBD, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xBD,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -3990,9 +5450,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LDA abs,X absolute,X without page cross"),
-                make_testcase(0xBD, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "LDA abs,X absolute,X without page cross",
+                },
+                testcase{
+                    .opcode = 0xBD,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -4002,15 +5468,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LDA abs,X absolute,X with page cross"),
+                    .description = "LDA abs,X absolute,X with page cross",
+                },
             }
         },
         // 0xBE
         {
             0xBE,
             {
-                make_testcase(0xBE, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xBE,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -4020,9 +5492,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LDX abs,Y absolute,Y without page cross"),
-                make_testcase(0xBE, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "LDX abs,Y absolute,Y without page cross",
+                },
+                testcase{
+                    .opcode = 0xBE,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -4032,15 +5510,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LDX abs,Y absolute,Y with page cross"),
+                    .description = "LDX abs,Y absolute,Y with page cross",
+                },
             }
         },
         // 0xBF
         {
             0xBF,
             {
-                make_testcase(0xBF, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xBF,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -4050,9 +5534,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LAX abs,Y absolute,Y without page cross"),
-                make_testcase(0xBF, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "LAX abs,Y absolute,Y without page cross",
+                },
+                testcase{
+                    .opcode = 0xBF,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -4062,30 +5552,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "LAX abs,Y absolute,Y with page cross"),
+                    .description = "LAX abs,Y absolute,Y with page cross",
+                },
             }
         },
         // 0xC0
         {
             0xC0,
             {
-                make_testcase(0xC0, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xC0,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .cpy(0x30)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "CPY #imm immediate"),
+                    .description = "CPY #imm immediate",
+                },
             }
         },
         // 0xC1
         {
             0xC1,
             {
-                make_testcase(0xC1, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xC1,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_ptr_base")
                         .org(0x0008, "zp_ptr")
@@ -4097,30 +5599,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "CMP (zp,X) indexed indirect with zero-page pointer-base wraparound"),
+                    .description = "CMP (zp,X) indexed indirect with zero-page pointer-base wraparound",
+                },
             }
         },
         // 0xC2
         {
             0xC2,
             {
-                make_testcase(0xC2, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xC2,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .nop_opcode(0xC2, 0x7f)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP #imm immediate"),
+                    .description = "NOP #imm immediate",
+                },
             }
         },
         // 0xC3
         {
             0xC3,
             {
-                make_testcase(0xC3, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xC3,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_ptr_base")
                         .org(0x0008, "zp_ptr")
@@ -4132,15 +5646,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "DCP (zp,X) indexed indirect with zero-page pointer-base wraparound"),
+                    .description = "DCP (zp,X) indexed indirect with zero-page pointer-base wraparound",
+                },
             }
         },
         // 0xC4
         {
             0xC4,
             {
-                make_testcase(0xC4, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xC4,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x87)
@@ -4149,15 +5669,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "CPY zp zero page"),
+                    .description = "CPY zp zero page",
+                },
             }
         },
         // 0xC5
         {
             0xC5,
             {
-                make_testcase(0xC5, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xC5,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x87)
@@ -4166,15 +5692,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "CMP zp zero page"),
+                    .description = "CMP zp zero page",
+                },
             }
         },
         // 0xC6
         {
             0xC6,
             {
-                make_testcase(0xC6, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xC6,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x80)
@@ -4183,15 +5715,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "DEC zp zero page"),
+                    .description = "DEC zp zero page",
+                },
             }
         },
         // 0xC7
         {
             0xC7,
             {
-                make_testcase(0xC7, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xC7,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x80)
@@ -4200,75 +5738,105 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "DCP zp zero page"),
+                    .description = "DCP zp zero page",
+                },
             }
         },
         // 0xC8
         {
             0xC8,
             {
-                make_testcase(0xC8, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xC8,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .iny()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "INY implied"),
+                    .description = "INY implied",
+                },
             }
         },
         // 0xC9
         {
             0xC9,
             {
-                make_testcase(0xC9, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xC9,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .cmp(0x40)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "CMP #imm immediate"),
+                    .description = "CMP #imm immediate",
+                },
             }
         },
         // 0xCA
         {
             0xCA,
             {
-                make_testcase(0xCA, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xCA,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .dex()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "DEX implied"),
+                    .description = "DEX implied",
+                },
             }
         },
         // 0xCB
         {
             0xCB,
             {
-                make_testcase(0xCB, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xCB,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .axs(0x33)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "AXS #imm immediate"),
+                    .description = "AXS #imm immediate",
+                },
             }
         },
         // 0xCC
         {
             0xCC,
             {
-                make_testcase(0xCC, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xCC,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .cpy(absolute, "value_addr")
@@ -4277,15 +5845,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x87)
                     .end().compile(),
-                    "CPY abs absolute"),
+                    .description = "CPY abs absolute",
+                },
             }
         },
         // 0xCD
         {
             0xCD,
             {
-                make_testcase(0xCD, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xCD,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .cmp(absolute, "value_addr")
@@ -4294,15 +5868,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x87)
                     .end().compile(),
-                    "CMP abs absolute"),
+                    .description = "CMP abs absolute",
+                },
             }
         },
         // 0xCE
         {
             0xCE,
             {
-                make_testcase(0xCE, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xCE,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .dec(absolute, "value_addr")
@@ -4311,15 +5891,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x80)
                     .end().compile(),
-                    "DEC abs absolute"),
+                    .description = "DEC abs absolute",
+                },
             }
         },
         // 0xCF
         {
             0xCF,
             {
-                make_testcase(0xCF, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xCF,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .dcp(absolute, "value_addr")
@@ -4328,15 +5914,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x80)
                     .end().compile(),
-                    "DCP abs absolute"),
+                    .description = "DCP abs absolute",
+                },
             }
         },
         // 0xD0
         {
             0xD0,
             {
-                make_testcase(0xD0, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x26, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xD0,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x26, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .bne("branch_target")
@@ -4344,33 +5936,51 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                             .jmp("trap")
                         .org(0x0420, "branch_target")
                     .end().compile(),
-                    "BNE rel not taken with a non-fallthrough encoded target"),
-                make_testcase(0xD0, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "BNE rel not taken with a non-fallthrough encoded target",
+                },
+                testcase{
+                    .opcode = 0xD0,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .bne("trap")
                         .org(0x0420, "trap")
                             .jmp("trap")
                     .end().compile(),
-                    "BNE rel taken without page cross to a non-fallthrough target"),
-                make_testcase(0xD0, 2, 0x04f0, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "BNE rel taken without page cross to a non-fallthrough target",
+                },
+                testcase{
+                    .opcode = 0xD0,
+                    .bytes = 2,
+                    .start_at = 0x04f0,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x04f0)
                             .bne("trap")
                         .org(0x0505, "trap")
                             .jmp("trap")
                     .end().compile(),
-                    "BNE rel taken with page cross"),
+                    .description = "BNE rel taken with page cross",
+                },
             }
         },
         // 0xD1
         {
             0xD1,
             {
-                make_testcase(0xD1, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xD1,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -4382,9 +5992,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "CMP (zp),Y indirect indexed without page cross"),
-                make_testcase(0xD1, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "CMP (zp),Y indirect indexed without page cross",
+                },
+                testcase{
+                    .opcode = 0xD1,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -4396,30 +6012,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "CMP (zp),Y indirect indexed with page cross"),
+                    .description = "CMP (zp),Y indirect indexed with page cross",
+                },
             }
         },
         // 0xD2
         {
             0xD2,
             {
-                make_testcase(0xD2, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xD2,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .kil_opcode(0xD2)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "KIL/JAM enters JAM/KIL bus loop"),
+                    .description = "KIL/JAM enters JAM/KIL bus loop",
+                },
             }
         },
         // 0xD3
         {
             0xD3,
             {
-                make_testcase(0xD3, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xD3,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -4431,9 +6059,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "DCP (zp),Y indirect indexed"),
-                make_testcase(0xD3, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "DCP (zp),Y indirect indexed",
+                },
+                testcase{
+                    .opcode = 0xD3,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -4445,15 +6079,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "DCP (zp),Y indirect indexed with page cross"),
+                    .description = "DCP (zp),Y indirect indexed with page cross",
+                },
             }
         },
         // 0xD4
         {
             0xD4,
             {
-                make_testcase(0xD4, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xD4,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -4463,15 +6103,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP zp,X zero page,X with wraparound"),
+                    .description = "NOP zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0xD5
         {
             0xD5,
             {
-                make_testcase(0xD5, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xD5,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -4481,15 +6127,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "CMP zp,X zero page,X with wraparound"),
+                    .description = "CMP zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0xD6
         {
             0xD6,
             {
-                make_testcase(0xD6, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xD6,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -4499,15 +6151,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "DEC zp,X zero page,X with wraparound"),
+                    .description = "DEC zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0xD7
         {
             0xD7,
             {
-                make_testcase(0xD7, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xD7,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -4517,30 +6175,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "DCP zp,X zero page,X with wraparound"),
+                    .description = "DCP zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0xD8
         {
             0xD8,
             {
-                make_testcase(0xD8, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xD8,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .cld()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "CLD implied"),
+                    .description = "CLD implied",
+                },
             }
         },
         // 0xD9
         {
             0xD9,
             {
-                make_testcase(0xD9, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xD9,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -4550,9 +6220,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "CMP abs,Y absolute,Y without page cross"),
-                make_testcase(0xD9, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "CMP abs,Y absolute,Y without page cross",
+                },
+                testcase{
+                    .opcode = 0xD9,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -4562,30 +6238,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "CMP abs,Y absolute,Y with page cross"),
+                    .description = "CMP abs,Y absolute,Y with page cross",
+                },
             }
         },
         // 0xDA
         {
             0xDA,
             {
-                make_testcase(0xDA, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xDA,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .nop_opcode(0xDA)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP implied"),
+                    .description = "NOP implied",
+                },
             }
         },
         // 0xDB
         {
             0xDB,
             {
-                make_testcase(0xDB, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x10, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xDB,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x10, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -4595,9 +6283,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "DCP abs,Y absolute,Y"),
-                make_testcase(0xDB, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "DCP abs,Y absolute,Y",
+                },
+                testcase{
+                    .opcode = 0xDB,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -4607,15 +6301,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "DCP abs,Y absolute,Y with page cross"),
+                    .description = "DCP abs,Y absolute,Y with page cross",
+                },
             }
         },
         // 0xDC
         {
             0xDC,
             {
-                make_testcase(0xDC, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xDC,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -4625,9 +6325,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP abs,X absolute,X without page cross"),
-                make_testcase(0xDC, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "NOP abs,X absolute,X without page cross",
+                },
+                testcase{
+                    .opcode = 0xDC,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -4637,15 +6343,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP abs,X absolute,X with page cross"),
+                    .description = "NOP abs,X absolute,X with page cross",
+                },
             }
         },
         // 0xDD
         {
             0xDD,
             {
-                make_testcase(0xDD, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xDD,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -4655,9 +6367,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "CMP abs,X absolute,X without page cross"),
-                make_testcase(0xDD, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "CMP abs,X absolute,X without page cross",
+                },
+                testcase{
+                    .opcode = 0xDD,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -4667,15 +6385,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "CMP abs,X absolute,X with page cross"),
+                    .description = "CMP abs,X absolute,X with page cross",
+                },
             }
         },
         // 0xDE
         {
             0xDE,
             {
-                make_testcase(0xDE, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xDE,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -4685,9 +6409,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "DEC abs,X absolute,X"),
-                make_testcase(0xDE, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "DEC abs,X absolute,X",
+                },
+                testcase{
+                    .opcode = 0xDE,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -4697,15 +6427,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "DEC abs,X absolute,X with page cross"),
+                    .description = "DEC abs,X absolute,X with page cross",
+                },
             }
         },
         // 0xDF
         {
             0xDF,
             {
-                make_testcase(0xDF, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xDF,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -4715,9 +6451,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "DCP abs,X absolute,X"),
-                make_testcase(0xDF, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "DCP abs,X absolute,X",
+                },
+                testcase{
+                    .opcode = 0xDF,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -4727,30 +6469,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "DCP abs,X absolute,X with page cross"),
+                    .description = "DCP abs,X absolute,X with page cross",
+                },
             }
         },
         // 0xE0
         {
             0xE0,
             {
-                make_testcase(0xE0, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xE0,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .cpx(0x30)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "CPX #imm immediate"),
+                    .description = "CPX #imm immediate",
+                },
             }
         },
         // 0xE1
         {
             0xE1,
             {
-                make_testcase(0xE1, 2, 0x0400, 0x0800, 0x0800, 0x45, 0x10, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xE1,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x10, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_ptr_base")
                         .org(0x0008, "zp_ptr")
@@ -4762,30 +6516,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SBC (zp,X) indexed indirect with zero-page pointer-base wraparound"),
+                    .description = "SBC (zp,X) indexed indirect with zero-page pointer-base wraparound",
+                },
             }
         },
         // 0xE2
         {
             0xE2,
             {
-                make_testcase(0xE2, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xE2,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .nop_opcode(0xE2, 0x7f)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP #imm immediate"),
+                    .description = "NOP #imm immediate",
+                },
             }
         },
         // 0xE3
         {
             0xE3,
             {
-                make_testcase(0xE3, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xE3,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_ptr_base")
                         .org(0x0008, "zp_ptr")
@@ -4797,15 +6563,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ISC (zp,X) indexed indirect with zero-page pointer-base wraparound"),
+                    .description = "ISC (zp,X) indexed indirect with zero-page pointer-base wraparound",
+                },
             }
         },
         // 0xE4
         {
             0xE4,
             {
-                make_testcase(0xE4, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xE4,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x87)
@@ -4814,15 +6586,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "CPX zp zero page"),
+                    .description = "CPX zp zero page",
+                },
             }
         },
         // 0xE5
         {
             0xE5,
             {
-                make_testcase(0xE5, 2, 0x0400, 0x0800, 0x0800, 0x45, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xE5,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x15)
@@ -4831,15 +6609,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SBC zp zero page"),
+                    .description = "SBC zp zero page",
+                },
             }
         },
         // 0xE6
         {
             0xE6,
             {
-                make_testcase(0xE6, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xE6,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x7f)
@@ -4848,15 +6632,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "INC zp zero page"),
+                    .description = "INC zp zero page",
+                },
             }
         },
         // 0xE7
         {
             0xE7,
             {
-                make_testcase(0xE7, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xE7,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0080, "value_zp")
                             .db(0x7f)
@@ -4865,93 +6655,135 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ISC zp zero page"),
+                    .description = "ISC zp zero page",
+                },
             }
         },
         // 0xE8
         {
             0xE8,
             {
-                make_testcase(0xE8, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xE8,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .inx()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "INX implied"),
+                    .description = "INX implied",
+                },
             }
         },
         // 0xE9
         {
             0xE9,
             {
-                make_testcase(0xE9, 2, 0x0400, 0x0800, 0x0800, 0x45, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xE9,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .sbc(0x12)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SBC #imm immediate"),
-                make_testcase(0xE9, 2, 0x0400, 0x0800, 0x0800, 0x45, 0x00, 0x00, 0x2d, 0xfd,
-                    Asm6502::New()
+                    .description = "SBC #imm immediate",
+                },
+                testcase{
+                    .opcode = 0xE9,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x00, .Y = 0x00, .P = 0x2d, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .sbc(0x12)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SBC #imm decimal mode immediate"),
+                    .description = "SBC #imm decimal mode immediate",
+                },
             }
         },
         // 0xEA
         {
             0xEA,
             {
-                make_testcase(0xEA, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xEA,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .nop()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP implied"),
+                    .description = "NOP implied",
+                },
             }
         },
         // 0xEB
         {
             0xEB,
             {
-                make_testcase(0xEB, 2, 0x0400, 0x0800, 0x0800, 0x45, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xEB,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .sbc_opcode(0xEB, 0x12)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SBC #imm immediate"),
-                make_testcase(0xEB, 2, 0x0400, 0x0800, 0x0800, 0x45, 0x00, 0x00, 0x2d, 0xfd,
-                    Asm6502::New()
+                    .description = "SBC #imm immediate",
+                },
+                testcase{
+                    .opcode = 0xEB,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x00, .Y = 0x00, .P = 0x2d, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .sbc_opcode(0xEB, 0x12)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SBC #imm decimal mode immediate"),
+                    .description = "SBC #imm decimal mode immediate",
+                },
             }
         },
         // 0xEC
         {
             0xEC,
             {
-                make_testcase(0xEC, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xEC,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .cpx(absolute, "value_addr")
@@ -4960,15 +6792,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x87)
                     .end().compile(),
-                    "CPX abs absolute"),
+                    .description = "CPX abs absolute",
+                },
             }
         },
         // 0xED
         {
             0xED,
             {
-                make_testcase(0xED, 3, 0x0400, 0x0800, 0x0800, 0x45, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xED,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .sbc(absolute, "value_addr")
@@ -4977,15 +6815,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x15)
                     .end().compile(),
-                    "SBC abs absolute"),
+                    .description = "SBC abs absolute",
+                },
             }
         },
         // 0xEE
         {
             0xEE,
             {
-                make_testcase(0xEE, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xEE,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .inc(absolute, "value_addr")
@@ -4994,15 +6838,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x7f)
                     .end().compile(),
-                    "INC abs absolute"),
+                    .description = "INC abs absolute",
+                },
             }
         },
         // 0xEF
         {
             0xEF,
             {
-                make_testcase(0xEF, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xEF,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .isc(absolute, "value_addr")
@@ -5011,15 +6861,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .org(0x2134, "value_addr")
                             .db(0x7f)
                     .end().compile(),
-                    "ISC abs absolute"),
+                    .description = "ISC abs absolute",
+                },
             }
         },
         // 0xF0
         {
             0xF0,
             {
-                make_testcase(0xF0, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xF0,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .beq("branch_target")
@@ -5027,33 +6883,51 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                             .jmp("trap")
                         .org(0x0420, "branch_target")
                     .end().compile(),
-                    "BEQ rel not taken with a non-fallthrough encoded target"),
-                make_testcase(0xF0, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x26, 0xfd,
-                    Asm6502::New()
+                    .description = "BEQ rel not taken with a non-fallthrough encoded target",
+                },
+                testcase{
+                    .opcode = 0xF0,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x26, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .beq("trap")
                         .org(0x0420, "trap")
                             .jmp("trap")
                     .end().compile(),
-                    "BEQ rel taken without page cross to a non-fallthrough target"),
-                make_testcase(0xF0, 2, 0x04f0, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x26, 0xfd,
-                    Asm6502::New()
+                    .description = "BEQ rel taken without page cross to a non-fallthrough target",
+                },
+                testcase{
+                    .opcode = 0xF0,
+                    .bytes = 2,
+                    .start_at = 0x04f0,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x26, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x04f0)
                             .beq("trap")
                         .org(0x0505, "trap")
                             .jmp("trap")
                     .end().compile(),
-                    "BEQ rel taken with page cross"),
+                    .description = "BEQ rel taken with page cross",
+                },
             }
         },
         // 0xF1
         {
             0xF1,
             {
-                make_testcase(0xF1, 2, 0x0400, 0x0800, 0x0800, 0x45, 0x00, 0x10, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xF1,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x00, .Y = 0x10, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -5065,9 +6939,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SBC (zp),Y indirect indexed without page cross"),
-                make_testcase(0xF1, 2, 0x0400, 0x0800, 0x0800, 0x45, 0x00, 0x20, 0x25, 0xfd,
-                    Asm6502::New()
+                    .description = "SBC (zp),Y indirect indexed without page cross",
+                },
+                testcase{
+                    .opcode = 0xF1,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x00, .Y = 0x20, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -5079,30 +6959,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SBC (zp),Y indirect indexed with page cross"),
+                    .description = "SBC (zp),Y indirect indexed with page cross",
+                },
             }
         },
         // 0xF2
         {
             0xF2,
             {
-                make_testcase(0xF2, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xF2,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .kil_opcode(0xF2)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "KIL/JAM enters JAM/KIL bus loop"),
+                    .description = "KIL/JAM enters JAM/KIL bus loop",
+                },
             }
         },
         // 0xF3
         {
             0xF3,
             {
-                make_testcase(0xF3, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x10, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xF3,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x10, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -5114,9 +7006,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ISC (zp),Y indirect indexed"),
-                make_testcase(0xF3, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "ISC (zp),Y indirect indexed",
+                },
+                testcase{
+                    .opcode = 0xF3,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0020, "zp_ptr")
                             .dw("value_base")
@@ -5128,15 +7026,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ISC (zp),Y indirect indexed with page cross"),
+                    .description = "ISC (zp),Y indirect indexed with page cross",
+                },
             }
         },
         // 0xF4
         {
             0xF4,
             {
-                make_testcase(0xF4, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xF4,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -5146,15 +7050,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP zp,X zero page,X with wraparound"),
+                    .description = "NOP zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0xF5
         {
             0xF5,
             {
-                make_testcase(0xF5, 2, 0x0400, 0x0800, 0x0800, 0x45, 0x10, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xF5,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x10, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -5164,15 +7074,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SBC zp,X zero page,X with wraparound"),
+                    .description = "SBC zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0xF6
         {
             0xF6,
             {
-                make_testcase(0xF6, 2, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xF6,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -5182,15 +7098,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "INC zp,X zero page,X with wraparound"),
+                    .description = "INC zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0xF7
         {
             0xF7,
             {
-                make_testcase(0xF7, 2, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xF7,
+                    .bytes = 2,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x00f8, "zp_base")
                         .org(0x0008, "value_zp")
@@ -5200,30 +7122,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ISC zp,X zero page,X with wraparound"),
+                    .description = "ISC zp,X zero page,X with wraparound",
+                },
             }
         },
         // 0xF8
         {
             0xF8,
             {
-                make_testcase(0xF8, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xF8,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .sed()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SED implied"),
+                    .description = "SED implied",
+                },
             }
         },
         // 0xF9
         {
             0xF9,
             {
-                make_testcase(0xF9, 3, 0x0400, 0x0800, 0x0800, 0x45, 0x00, 0x10, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xF9,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x00, .Y = 0x10, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -5233,9 +7167,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SBC abs,Y absolute,Y without page cross"),
-                make_testcase(0xF9, 3, 0x0400, 0x0800, 0x0800, 0x45, 0x00, 0x20, 0x25, 0xfd,
-                    Asm6502::New()
+                    .description = "SBC abs,Y absolute,Y without page cross",
+                },
+                testcase{
+                    .opcode = 0xF9,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x00, .Y = 0x20, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -5245,30 +7185,42 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SBC abs,Y absolute,Y with page cross"),
+                    .description = "SBC abs,Y absolute,Y with page cross",
+                },
             }
         },
         // 0xFA
         {
             0xFA,
             {
-                make_testcase(0xFA, 1, 0x0400, 0x0800, 0x0800, 0x42, 0x00, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xFA,
+                    .bytes = 1,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x00, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x0400)
                             .nop_opcode(0xFA)
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP implied"),
+                    .description = "NOP implied",
+                },
             }
         },
         // 0xFB
         {
             0xFB,
             {
-                make_testcase(0xFB, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x10, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xFB,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x10, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -5278,9 +7230,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ISC abs,Y absolute,Y"),
-                make_testcase(0xFB, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x00, 0x20, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "ISC abs,Y absolute,Y",
+                },
+                testcase{
+                    .opcode = 0xFB,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x00, .Y = 0x20, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -5290,15 +7248,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ISC abs,Y absolute,Y with page cross"),
+                    .description = "ISC abs,Y absolute,Y with page cross",
+                },
             }
         },
         // 0xFC
         {
             0xFC,
             {
-                make_testcase(0xFC, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xFC,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -5308,9 +7272,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP abs,X absolute,X without page cross"),
-                make_testcase(0xFC, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "NOP abs,X absolute,X without page cross",
+                },
+                testcase{
+                    .opcode = 0xFC,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -5320,15 +7290,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "NOP abs,X absolute,X with page cross"),
+                    .description = "NOP abs,X absolute,X with page cross",
+                },
             }
         },
         // 0xFD
         {
             0xFD,
             {
-                make_testcase(0xFD, 3, 0x0400, 0x0800, 0x0800, 0x45, 0x10, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xFD,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x10, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -5338,9 +7314,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SBC abs,X absolute,X without page cross"),
-                make_testcase(0xFD, 3, 0x0400, 0x0800, 0x0800, 0x45, 0x20, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                    .description = "SBC abs,X absolute,X without page cross",
+                },
+                testcase{
+                    .opcode = 0xFD,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x45, .X = 0x20, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -5350,15 +7332,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "SBC abs,X absolute,X with page cross"),
+                    .description = "SBC abs,X absolute,X with page cross",
+                },
             }
         },
         // 0xFE
         {
             0xFE,
             {
-                make_testcase(0xFE, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x10, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xFE,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x10, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -5368,9 +7356,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "INC abs,X absolute,X"),
-                make_testcase(0xFE, 3, 0x0400, 0x0800, 0x0800, 0x42, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "INC abs,X absolute,X",
+                },
+                testcase{
+                    .opcode = 0xFE,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0x42, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -5380,15 +7374,21 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "INC abs,X absolute,X with page cross"),
+                    .description = "INC abs,X absolute,X with page cross",
+                },
             }
         },
         // 0xFF
         {
             0xFF,
             {
-                make_testcase(0xFF, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x10, 0x00, 0x25, 0xfd,
-                    Asm6502::New()
+                testcase{
+                    .opcode = 0xFF,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x10, .Y = 0x00, .P = 0x25, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x2100, "value_base")
                         .org(0x2110, "value_addr")
@@ -5398,9 +7398,15 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ISC abs,X absolute,X"),
-                make_testcase(0xFF, 3, 0x0400, 0x0800, 0x0800, 0xa5, 0x20, 0x00, 0x24, 0xfd,
-                    Asm6502::New()
+                    .description = "ISC abs,X absolute,X",
+                },
+                testcase{
+                    .opcode = 0xFF,
+                    .bytes = 3,
+                    .start_at = 0x0400,
+                    .vectors = {.reset = 0x0200, .brk_irq = 0x0800, .nmi = 0x0800},
+                    .A = 0xa5, .X = 0x20, .Y = 0x00, .P = 0x24, .S = 0xfd,
+                    .program = Asm6502::New()
                     .begin()
                         .org(0x21f0, "value_base")
                         .org(0x2210, "value_addr")
@@ -5410,7 +7416,8 @@ std::map<std::uint8_t, std::vector<testcase>> get_nmos6502_opcode_testcases()
                         .label("trap")
                             .jmp("trap")
                     .end().compile(),
-                    "ISC abs,X absolute,X with page cross"),
+                    .description = "ISC abs,X absolute,X with page cross",
+                },
             }
         },
     };

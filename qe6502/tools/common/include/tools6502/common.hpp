@@ -33,7 +33,11 @@ struct testcase
     std::uint8_t bytes = 0u;
     std::uint16_t start_at = 0x0400u;
     vector_set vectors{};
-    cpu_state initial_state{};
+    std::uint8_t A = 0x00u;
+    std::uint8_t X = 0x00u;
+    std::uint8_t Y = 0x00u;
+    std::uint8_t P = 0x24u;
+    std::uint8_t S = 0xfdu;
     memory_setup mem_setup{};
     memory_setup program{};
     std::string description{};
@@ -42,11 +46,11 @@ struct testcase
 inline memory_setup make_bootstrap(const testcase& test)
 {
     return asm6502::bootstrap_program(
-        test.initial_state.A,
-        test.initial_state.X,
-        test.initial_state.Y,
-        test.initial_state.P,
-        test.initial_state.S,
+        test.A,
+        test.X,
+        test.Y,
+        test.P,
+        test.S,
         test.start_at,
         test.vectors.reset,
         test.vectors.brk_irq,

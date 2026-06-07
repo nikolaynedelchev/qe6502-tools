@@ -9,25 +9,49 @@ if(NOT TARGET perfect6502)
     )
 endif()
 
+file(GLOB_RECURSE tools6502_sources CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.cc
+)
+list(FILTER tools6502_sources EXCLUDE REGEX [[/tests/]])
+list(FILTER tools6502_sources EXCLUDE REGEX [[/cpu6502_bridge/tools/]])
+
+file(GLOB_RECURSE tools6502_headers CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.hh
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.h
+)
+list(FILTER tools6502_headers EXCLUDE REGEX [[/tests/]])
+list(FILTER tools6502_headers EXCLUDE REGEX [[/cpu6502_bridge/tools/]])
+
 add_library(tools6502 STATIC
-    asm6502/src/asm6502.cpp
-    common/include/tools6502/testcase_collections.hpp
-    common/src/nmos6502_opcode_testcases.cpp
-    lockstep/include/tools6502/lockstep.hpp
-    lockstep/src/lockstep.cpp
-    cpu6502_bridge/include/cpu6502_bridge/cpu.hpp
-    cpu6502_bridge/src/cpu.cpp
-    cpu6502_bridge/src/qe6502_backend.cpp
-    cpu6502_bridge/src/perfect6502_backend.cpp
+    ${tools6502_sources}
+    ${tools6502_headers}
 )
 add_library(tools6502::tools6502 ALIAS tools6502)
 
+file(GLOB_RECURSE tools6502_include_markers LIST_DIRECTORIES true CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/*/include
+)
+set(tools6502_include_dirs)
+foreach(tools6502_include_dir IN LISTS tools6502_include_markers)
+    if(IS_DIRECTORY ${tools6502_include_dir})
+        list(APPEND tools6502_include_dirs ${tools6502_include_dir})
+    endif()
+endforeach()
+list(REMOVE_DUPLICATES tools6502_include_dirs)
+
+set(tools6502_build_include_dirs)
+foreach(tools6502_include_dir IN LISTS tools6502_include_dirs)
+    list(APPEND tools6502_build_include_dirs
+        $<BUILD_INTERFACE:${tools6502_include_dir}>
+    )
+endforeach()
+
 target_include_directories(tools6502
     PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/asm6502/include>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/common/include>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lockstep/include>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/cpu6502_bridge/include>
+        ${tools6502_build_include_dirs}
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
@@ -38,7 +62,7 @@ target_link_libraries(tools6502
 )
 
 qe6502_configure_warnings(tools6502)
-target_compile_features(tools6502 PUBLIC cxx_std_17)
+target_compile_features(tools6502 PUBLIC cxx_std_17 PRIVATE cxx_std_20)
 
 if(QE6502_INSTALL)
     install(TARGETS tools6502
@@ -49,18 +73,11 @@ if(QE6502_INSTALL)
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     )
 
-    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/asm6502/include/asm6502
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    )
-    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/common/include/tools6502
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    )
-    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lockstep/include/tools6502
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    )
-    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/cpu6502_bridge/include/cpu6502_bridge
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    )
+    foreach(tools6502_include_dir IN LISTS tools6502_include_dirs)
+        install(DIRECTORY ${tools6502_include_dir}/
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        )
+    endforeach()
 endif()
 
 if(QE6502_BUILD_TESTS)

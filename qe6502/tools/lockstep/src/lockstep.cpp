@@ -25,11 +25,21 @@ void copy_memory_to_cpu(cpu6502_bridge::ICpu& cpu, const memory_image& image)
     std::memcpy(cpu.memory(), image.data(), image.size());
 }
 
-void initialize_memory(memory_image& image, const MemoryInit& init)
+void apply_mem_values_to_cpu(cpu6502_bridge::ICpu& cpu, const memory_setup& setup)
+{
+    auto* memory = cpu.memory();
+    for (const auto& [address, value] : setup) {
+        memory[address] = value;
+    }
+}
+
+void initialize_memory_image(memory_image& image, const MemoryInit& init)
 {
     std::visit([&image](const auto& policy) {
         using Policy = std::decay_t<decltype(policy)>;
-        if constexpr (std::is_same_v<Policy, MemoryFill>) {
+        if constexpr (std::is_same_v<Policy, MemoryUnchanged>) {
+            // No full-memory initialization. Callers apply only their explicit patches.
+        } else if constexpr (std::is_same_v<Policy, MemoryFill>) {
             image.fill(policy.value);
         } else if constexpr (std::is_same_v<Policy, MemoryRandom>) {
             std::mt19937 rng(policy.seed);
@@ -43,6 +53,25 @@ void initialize_memory(memory_image& image, const MemoryInit& init)
             }
         }
     }, init);
+}
+
+bool initializes_full_memory(const MemoryInit& init)
+{
+    return !std::holds_alternative<MemoryUnchanged>(init);
+}
+
+void initialize_cpu_pair_memory(cpu6502_bridge::ICpu& left,
+                                cpu6502_bridge::ICpu& right,
+                                const MemoryInit& init)
+{
+    if (!initializes_full_memory(init)) {
+        return;
+    }
+
+    memory_image image{};
+    initialize_memory_image(image, init);
+    copy_memory_to_cpu(left, image);
+    copy_memory_to_cpu(right, image);
 }
 
 bool cpu_at_fetch_at(const cpu6502_bridge::ICpu& cpu,
@@ -139,9 +168,17 @@ void append_result(LockstepRunResult& destination,
     destination.right_trace.insert(destination.right_trace.end(),
                                    source.right_trace.begin(),
                                    source.right_trace.end());
+    if (!source.passed) {
+        destination.passed = false;
+    }
     if (!destination.first_mismatch && source.first_mismatch) {
         destination.first_mismatch = old_size + *source.first_mismatch;
     }
+}
+
+LockstepRunResult empty_success_result()
+{
+    return LockstepRunResult{};
 }
 
 } // namespace
@@ -163,10 +200,7 @@ const cpu6502_bridge::ICpu& LockstepRunner::right() const noexcept { return *rig
 
 bool LockstepRunner::setup_and_run(const LockstepConfig& config)
 {
-    memory_image image{};
-    initialize_memory(image, config.memory);
-    copy_memory_to_cpu(*left_, image);
-    copy_memory_to_cpu(*right_, image);
+    initialize_cpu_pair_memory(*left_, *right_, config.memory);
 
     compare_ = config.compare;
     cycle_ = 0u;
@@ -184,17 +218,27 @@ bool LockstepRunner::setup_and_run(const LockstepConfig& config)
 bool LockstepRunner::setup_and_run(const testcase& test,
                                    const LockstepConfig& config)
 {
-    memory_image image{};
-    initialize_memory(image, config.memory);
-    apply_mem_values(image, test.mem_setup);
-    apply_mem_values(image, test.program);
-    apply_mem_values(image, make_bootstrap(test));
-
-    copy_memory_to_cpu(*left_, image);
-    copy_memory_to_cpu(*right_, image);
-
     compare_ = config.compare;
     cycle_ = 0u;
+
+    const auto bootstrap = make_bootstrap(test);
+
+    if (initializes_full_memory(config.memory)) {
+        memory_image image{};
+        initialize_memory_image(image, config.memory);
+        apply_mem_values(image, test.mem_setup);
+        apply_mem_values(image, test.program);
+        apply_mem_values(image, bootstrap);
+        copy_memory_to_cpu(*left_, image);
+        copy_memory_to_cpu(*right_, image);
+    } else {
+        apply_mem_values_to_cpu(*left_, test.mem_setup);
+        apply_mem_values_to_cpu(*right_, test.mem_setup);
+        apply_mem_values_to_cpu(*left_, test.program);
+        apply_mem_values_to_cpu(*right_, test.program);
+        apply_mem_values_to_cpu(*left_, bootstrap);
+        apply_mem_values_to_cpu(*right_, bootstrap);
+    }
 
     if (!restart_to_reset_fetch(*left_)) {
         return false;
@@ -220,6 +264,7 @@ LockstepRunResult LockstepRunner::step()
     result.right_trace.push_back(capture_trace(*right_, cycle_));
 
     if (!traces_match(result.left_trace.back(), result.right_trace.back(), compare_)) {
+        result.passed = false;
         result.first_mismatch = 0u;
         return result;
     }
@@ -236,7 +281,7 @@ LockstepRunResult LockstepRunner::step_cycles(std::size_t count)
     for (std::size_t index = 0u; index < count; ++index) {
         const auto one = step();
         append_result(result, one);
-        if (one.first_mismatch) {
+        if (!one.passed) {
             break;
         }
     }
@@ -246,15 +291,21 @@ LockstepRunResult LockstepRunner::step_cycles(std::size_t count)
 LockstepRunResult LockstepRunner::step_to_fetch(std::size_t max_steps)
 {
     LockstepRunResult result{};
+    bool reached = left_->is_opcode_fetch() && right_->is_opcode_fetch();
     for (std::size_t index = 0u; index < max_steps; ++index) {
         const auto one = step();
         append_result(result, one);
-        if (one.first_mismatch) {
-            break;
+        if (!one.passed) {
+            return result;
         }
-        if (left_->is_opcode_fetch() && right_->is_opcode_fetch()) {
-            break;
+        reached = left_->is_opcode_fetch() && right_->is_opcode_fetch();
+        if (reached) {
+            return result;
         }
+    }
+
+    if (!reached) {
+        result.passed = false;
     }
     return result;
 }
@@ -263,29 +314,119 @@ LockstepRunResult LockstepRunner::step_to_fetch_at(std::uint16_t address,
                                                    std::size_t max_steps)
 {
     LockstepRunResult result{};
+    bool reached = cpu_at_fetch_at(*left_, address) && cpu_at_fetch_at(*right_, address);
     for (std::size_t index = 0u; index < max_steps; ++index) {
         const auto one = step();
         append_result(result, one);
-        if (one.first_mismatch) {
-            break;
+        if (!one.passed) {
+            return result;
         }
-        if (cpu_at_fetch_at(*left_, address) && cpu_at_fetch_at(*right_, address)) {
-            break;
+        reached = cpu_at_fetch_at(*left_, address) && cpu_at_fetch_at(*right_, address);
+        if (reached) {
+            return result;
         }
+    }
+
+    if (!reached) {
+        result.passed = false;
     }
     return result;
 }
 
-void LockstepRunner::irq(bool asserted) noexcept
+LockstepRunResult LockstepRunner::irq(bool asserted)
 {
     left_->irq(asserted);
     right_->irq(asserted);
+    return empty_success_result();
 }
 
-void LockstepRunner::nmi(bool asserted) noexcept
+LockstepRunResult LockstepRunner::nmi(bool asserted)
 {
     left_->nmi(asserted);
     right_->nmi(asserted);
+    return empty_success_result();
+}
+
+LockstepScenarioRunner::LockstepScenarioRunner(
+    std::unique_ptr<cpu6502_bridge::ICpu> left,
+    std::unique_ptr<cpu6502_bridge::ICpu> right)
+    : lockstep_(std::move(left), std::move(right))
+{
+}
+
+bool LockstepScenarioRunner::setup(const testcase& test,
+                                   const LockstepConfig& lockstep_config)
+{
+    test_ = test;
+    lockstep_config_ = lockstep_config;
+    has_setup_ = lockstep_.setup_and_run(test_, lockstep_config_);
+    return has_setup_;
+}
+
+LockstepScenarioResult LockstepScenarioRunner::restart_run(
+    const std::vector<LockstepCommand>& commands,
+    const LockstepScenarioConfig& scenario_config)
+{
+    LockstepScenarioResult scenario_result{};
+
+    if (!has_setup_) {
+        scenario_result.passed = false;
+        return scenario_result;
+    }
+
+    if (!lockstep_.setup_and_run(test_, lockstep_config_)) {
+        scenario_result.passed = false;
+        return scenario_result;
+    }
+
+    scenario_result.results.reserve(commands.size());
+
+    for (std::size_t index = 0u; index < commands.size(); ++index) {
+        const auto& command = commands[index];
+        LockstepRunResult command_result = std::visit([this](const auto& cmd) -> LockstepRunResult {
+            using Command = std::decay_t<decltype(cmd)>;
+            if constexpr (std::is_same_v<Command, Step>) {
+                return lockstep_.step();
+            } else if constexpr (std::is_same_v<Command, StepCycles>) {
+                return lockstep_.step_cycles(cmd.count);
+            } else if constexpr (std::is_same_v<Command, StepToFetch>) {
+                return lockstep_.step_to_fetch(cmd.max_steps);
+            } else if constexpr (std::is_same_v<Command, StepToFetchAt>) {
+                return lockstep_.step_to_fetch_at(cmd.address, cmd.max_steps);
+            } else if constexpr (std::is_same_v<Command, NmiAssert>) {
+                return lockstep_.nmi(true);
+            } else if constexpr (std::is_same_v<Command, NmiDeassert>) {
+                return lockstep_.nmi(false);
+            } else if constexpr (std::is_same_v<Command, IrqAssert>) {
+                return lockstep_.irq(true);
+            } else if constexpr (std::is_same_v<Command, IrqDeassert>) {
+                return lockstep_.irq(false);
+            }
+        }, command);
+
+        if (!command_result.passed && !scenario_result.first_failed_command) {
+            scenario_result.passed = false;
+            scenario_result.first_failed_command = index;
+        }
+
+        scenario_result.results.push_back(std::move(command_result));
+
+        if (!scenario_result.passed && scenario_config.stop_on_failure) {
+            break;
+        }
+    }
+
+    return scenario_result;
+}
+
+LockstepRunner& LockstepScenarioRunner::lockstep() noexcept
+{
+    return lockstep_;
+}
+
+const LockstepRunner& LockstepScenarioRunner::lockstep() const noexcept
+{
+    return lockstep_;
 }
 
 } // namespace tools6502

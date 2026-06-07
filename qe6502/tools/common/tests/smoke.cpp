@@ -37,8 +37,8 @@ void test_default_testcase_shape()
     require(test.vectors.reset == 0x0200u, "default reset vector changed");
     require(test.vectors.brk_irq == 0x9100u, "default brk/irq vector changed");
     require(test.vectors.nmi == 0x9000u, "default nmi vector changed");
-    require(test.initial_state.P == 0x24u, "default P changed");
-    require(test.initial_state.S == 0xfdu, "default S changed");
+    require(test.P == 0x24u, "default P changed");
+    require(test.S == 0xfdu, "default S changed");
 }
 
 void test_bootstrap_uses_testcase_vectors()
@@ -48,11 +48,11 @@ void test_bootstrap_uses_testcase_vectors()
     test.vectors.reset = 0x1234u;
     test.vectors.brk_irq = 0x5678u;
     test.vectors.nmi = 0x9abcu;
-    test.initial_state.A = 0x11u;
-    test.initial_state.X = 0x22u;
-    test.initial_state.Y = 0x33u;
-    test.initial_state.P = 0x24u;
-    test.initial_state.S = 0xfdu;
+    test.A = 0x11u;
+    test.X = 0x22u;
+    test.Y = 0x33u;
+    test.P = 0x24u;
+    test.S = 0xfdu;
 
     const auto bootstrap = tools6502::make_bootstrap(test);
 
