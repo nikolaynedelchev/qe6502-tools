@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <iostream>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -34,6 +35,8 @@ struct GroupStats
     std::size_t failures = 0u;
     std::size_t nmi_first_handler_fetches = 0u;
     std::size_t brk_irq_first_handler_fetches = 0u;
+    std::size_t nmi_handler_fetches = 0u;
+    std::size_t brk_irq_handler_fetches = 0u;
 };
 
 struct SummaryStats
@@ -46,6 +49,8 @@ struct SummaryStats
     std::size_t scenarios_failed = 0u;
     std::size_t nmi_first_handler_fetches = 0u;
     std::size_t brk_irq_first_handler_fetches = 0u;
+    std::size_t nmi_handler_fetches = 0u;
+    std::size_t brk_irq_handler_fetches = 0u;
 };
 
 struct FirstFailure
@@ -72,6 +77,19 @@ tools6502::memory_setup make_handlers()
             .org(nmi_handler, "nmi_handler")
                 .inx()
                 .jmp("nmi_handler")
+            .org(brk_irq_handler, "brk_irq_handler")
+                .iny()
+                .jmp("brk_irq_handler")
+        .end().compile();
+}
+
+tools6502::memory_setup make_returning_handlers()
+{
+    return asm6502::Asm6502::New()
+        .begin()
+            .org(nmi_handler, "nmi_handler")
+                .inx()
+                .rti()
             .org(brk_irq_handler, "brk_irq_handler")
                 .iny()
                 .jmp("brk_irq_handler")
@@ -115,6 +133,8 @@ ArbitrationCase make_overlap_case(const char* name)
     auto program = asm6502::Asm6502::New()
         .begin()
             .org(program_start)
+                .ldx(0xfdu)
+                .txs()
                 .nop()
                 .nop()
                 .nop()
@@ -122,6 +142,40 @@ ArbitrationCase make_overlap_case(const char* name)
         .end().compile();
 
     const auto handlers = make_handlers();
+    program.insert(program.end(), handlers.begin(), handlers.end());
+
+    tools6502::testcase test{};
+    test.opcode = 0xeau;
+    test.bytes = 1u;
+    test.start_at = program_start;
+    test.vectors.reset = 0x0200u;
+    test.vectors.nmi = nmi_handler;
+    test.vectors.brk_irq = brk_irq_handler;
+    test.A = 0x00u;
+    test.X = 0x00u;
+    test.Y = 0x00u;
+    test.P = 0x20u;
+    test.S = 0xfdu;
+    test.program = std::move(program);
+    test.description = name;
+
+    return ArbitrationCase{name, std::move(test)};
+}
+
+ArbitrationCase make_returning_interrupt_case(const char* name)
+{
+    auto program = asm6502::Asm6502::New()
+        .begin()
+            .org(program_start)
+                .ldx(0xfdu)
+                .txs()
+                .nop()
+                .nop()
+                .nop()
+                .nop()
+        .end().compile();
+
+    const auto handlers = make_returning_handlers();
     program.insert(program.end(), handlers.begin(), handlers.end());
 
     tools6502::testcase test{};
@@ -161,6 +215,29 @@ FirstHandlerFetch observe_first_handler_fetch(const tools6502::LockstepScenarioR
     return FirstHandlerFetch::None;
 }
 
+std::pair<std::size_t, std::size_t> count_handler_fetches(
+    const tools6502::LockstepScenarioResult& result)
+{
+    std::size_t nmi_fetches = 0u;
+    std::size_t brk_irq_fetches = 0u;
+
+    for (const auto& command_result : result.results) {
+        for (const auto& entry : command_result.left_trace) {
+            if (!entry.opcode_fetch) {
+                continue;
+            }
+            if (entry.address == nmi_handler) {
+                ++nmi_fetches;
+            }
+            if (entry.address == brk_irq_handler) {
+                ++brk_irq_fetches;
+            }
+        }
+    }
+
+    return {nmi_fetches, brk_irq_fetches};
+}
+
 tools6502::LockstepConfig make_lockstep_config()
 {
     tools6502::LockstepConfig lockstep_config{};
@@ -196,6 +273,12 @@ void record_result(const tools6502::LockstepScenarioResult& result,
         ++summary.brk_irq_first_handler_fetches;
         ++group.brk_irq_first_handler_fetches;
     }
+
+    const auto handler_fetches = count_handler_fetches(result);
+    summary.nmi_handler_fetches += handler_fetches.first;
+    group.nmi_handler_fetches += handler_fetches.first;
+    summary.brk_irq_handler_fetches += handler_fetches.second;
+    group.brk_irq_handler_fetches += handler_fetches.second;
 
     if (result.passed) {
         ++summary.scenarios_passed;
@@ -400,14 +483,127 @@ std::vector<OverlapScenario> make_overlap_scenarios()
     };
 }
 
-GroupStats run_overlap_group(const char* group_name,
-                             const ArbitrationCase& test_case,
-                             SummaryStats& summary,
-                             FirstFailure& first_failure)
+std::vector<tools6502::LockstepCommand> returning_case_prefix()
+{
+    return {
+        tools6502::StepToFetch{8u},
+        tools6502::StepToFetch{8u},
+    };
+}
+
+std::vector<tools6502::LockstepCommand> with_returning_case_prefix(
+    std::vector<tools6502::LockstepCommand> script)
+{
+    auto prefixed = returning_case_prefix();
+    prefixed.insert(prefixed.end(), script.begin(), script.end());
+    return prefixed;
+}
+
+std::vector<tools6502::LockstepCommand> make_nmi_continuous_low_script()
+{
+    return with_returning_case_prefix({
+        tools6502::StepCycles{1u},
+        tools6502::NmiAssert{},
+        tools6502::StepCycles{44u},
+        tools6502::NmiDeassert{},
+        tools6502::StepCycles{8u},
+    });
+}
+
+std::vector<tools6502::LockstepCommand> make_nmi_reedge_script()
+{
+    return with_returning_case_prefix({
+        tools6502::StepCycles{1u},
+        tools6502::NmiAssert{},
+        tools6502::StepCycles{1u},
+        tools6502::NmiDeassert{},
+        tools6502::StepCycles{20u},
+        tools6502::NmiAssert{},
+        tools6502::StepCycles{1u},
+        tools6502::NmiDeassert{},
+        tools6502::StepCycles{40u},
+    });
+}
+
+std::vector<OverlapScenario> make_nmi_edge_lifetime_scenarios()
+{
+    return {
+        {"NMI held continuously low through handler/RTI", make_nmi_continuous_low_script()},
+        {"NMI deassert/reassert creates second edge", make_nmi_reedge_script()},
+    };
+}
+
+std::vector<tools6502::LockstepCommand> make_second_nmi_offset_script(std::size_t offset)
+{
+    return with_returning_case_prefix({
+        tools6502::StepCycles{1u},
+        tools6502::NmiAssert{},
+        tools6502::StepCycles{1u},
+        tools6502::NmiDeassert{},
+        tools6502::StepCycles{offset},
+        tools6502::NmiAssert{},
+        tools6502::StepCycles{1u},
+        tools6502::NmiDeassert{},
+        tools6502::StepCycles{48u},
+    });
+}
+
+std::vector<OverlapScenario> make_nested_nmi_scenarios()
+{
+    std::vector<OverlapScenario> scenarios{};
+    for (std::size_t offset = 0u; offset <= 12u; ++offset) {
+        scenarios.push_back({
+            "second NMI edge offset sweep",
+            make_second_nmi_offset_script(offset),
+        });
+    }
+    return scenarios;
+}
+
+std::vector<tools6502::LockstepCommand> make_irq_held_during_nmi_script()
+{
+    return with_returning_case_prefix({
+        tools6502::StepCycles{1u},
+        tools6502::IrqAssert{},
+        tools6502::StepCycles{1u},
+        tools6502::NmiAssert{},
+        tools6502::StepCycles{1u},
+        tools6502::NmiDeassert{},
+        tools6502::StepCycles{54u},
+        tools6502::IrqDeassert{},
+    });
+}
+
+std::vector<tools6502::LockstepCommand> make_irq_asserted_inside_nmi_service_script()
+{
+    return with_returning_case_prefix({
+        tools6502::StepCycles{1u},
+        tools6502::NmiAssert{},
+        tools6502::StepCycles{1u},
+        tools6502::NmiDeassert{},
+        tools6502::StepCycles{7u},
+        tools6502::IrqAssert{},
+        tools6502::StepCycles{48u},
+        tools6502::IrqDeassert{},
+    });
+}
+
+std::vector<OverlapScenario> make_irq_during_nmi_scenarios()
+{
+    return {
+        {"IRQ held before and through NMI service", make_irq_held_during_nmi_script()},
+        {"IRQ asserted inside NMI service", make_irq_asserted_inside_nmi_service_script()},
+    };
+}
+
+GroupStats run_named_script_group(const char* group_name,
+                                 const ArbitrationCase& test_case,
+                                 const std::vector<OverlapScenario>& scenarios,
+                                 SummaryStats& summary,
+                                 FirstFailure& first_failure)
 {
     const auto lockstep_config = make_lockstep_config();
     const auto scenario_config = make_scenario_config();
-    const auto scenarios = make_overlap_scenarios();
 
     tools6502::LockstepScenarioRunner runner(
         cpu6502_bridge::make_qe6502_cpu(),
@@ -452,6 +648,7 @@ int main()
     const auto brk_nmi_case = make_brk_case("BRK + NMI hijack windows");
     const auto brk_irq_case = make_brk_case("BRK + IRQ windows");
     const auto overlap_case = make_overlap_case("IRQ/NMI overlap priority");
+    const auto returning_case = make_returning_interrupt_case("returning interrupt handler case");
 
     auto report_group = [&summary](const char* name,
                                    const GroupStats& group,
@@ -469,6 +666,8 @@ int main()
                   << " hijacks=" << hijacks
                   << " nmi_first_handler_fetches=" << group.nmi_first_handler_fetches
                   << " brk_irq_first_handler_fetches=" << group.brk_irq_first_handler_fetches
+                  << " nmi_handler_fetches=" << group.nmi_handler_fetches
+                  << " brk_irq_handler_fetches=" << group.brk_irq_handler_fetches
                   << '\n' << std::flush;
     };
 
@@ -493,14 +692,48 @@ int main()
     report_group("BRK + IRQ windows", brk_irq_group, 0u);
 
     ++summary.groups_total;
-    const auto overlap_group = run_overlap_group(
+    const auto overlap_group = run_named_script_group(
         "IRQ/NMI overlap priority",
         overlap_case,
+        make_overlap_scenarios(),
         summary,
         first_failure);
     report_group("IRQ/NMI overlap priority",
                  overlap_group,
                  overlap_group.nmi_first_handler_fetches);
+
+    ++summary.groups_total;
+    const auto nmi_edge_lifetime_group = run_named_script_group(
+        "NMI continuous-low vs re-edge",
+        returning_case,
+        make_nmi_edge_lifetime_scenarios(),
+        summary,
+        first_failure);
+    report_group("NMI continuous-low vs re-edge",
+                 nmi_edge_lifetime_group,
+                 nmi_edge_lifetime_group.nmi_first_handler_fetches);
+
+    ++summary.groups_total;
+    const auto nested_nmi_group = run_named_script_group(
+        "NMI during NMI service / lost windows",
+        returning_case,
+        make_nested_nmi_scenarios(),
+        summary,
+        first_failure);
+    report_group("NMI during NMI service / lost windows",
+                 nested_nmi_group,
+                 nested_nmi_group.nmi_first_handler_fetches);
+
+    ++summary.groups_total;
+    const auto irq_during_nmi_group = run_named_script_group(
+        "IRQ held during NMI service",
+        returning_case,
+        make_irq_during_nmi_scenarios(),
+        summary,
+        first_failure);
+    report_group("IRQ held during NMI service",
+                 irq_during_nmi_group,
+                 irq_during_nmi_group.brk_irq_first_handler_fetches);
 
     std::cout << "\nsummary\n"
               << "  groups:    total=" << summary.groups_total
@@ -510,7 +743,9 @@ int main()
               << " pass=" << summary.scenarios_passed
               << " fail=" << summary.scenarios_failed << '\n'
               << "  first handler fetches: nmi=" << summary.nmi_first_handler_fetches
-              << " brk_irq=" << summary.brk_irq_first_handler_fetches << '\n';
+              << " brk_irq=" << summary.brk_irq_first_handler_fetches << '\n'
+              << "  all handler fetches:   nmi=" << summary.nmi_handler_fetches
+              << " brk_irq=" << summary.brk_irq_handler_fetches << '\n';
 
     if (first_failure.set) {
         std::cout << "\nfirst failure\n"
