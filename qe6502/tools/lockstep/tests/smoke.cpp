@@ -1,4 +1,4 @@
-#include <tools6502/lockstep.hpp>
+#include <lockstep.hpp>
 
 #include <asm6502/asm6502.h>
 

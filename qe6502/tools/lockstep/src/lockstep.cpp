@@ -1,4 +1,4 @@
-#include <tools6502/lockstep.hpp>
+#include <lockstep.hpp>
 
 #include <algorithm>
 #include <cstring>
@@ -11,14 +11,47 @@ namespace tools6502 {
 namespace {
 
 constexpr unsigned setup_restart_max_steps = 256u;
+constexpr unsigned setup_fetch_max_steps = 32u;
 constexpr unsigned setup_bootstrap_max_steps = 4096u;
+constexpr std::uint16_t safe_restart_address = 0x0400u;
+constexpr std::uint16_t internal_bootstrap_address = 0xfe00u;
+constexpr std::uint8_t opcode_nop = 0xeau;
 
-void apply_mem_values(memory_image& memory, const memory_setup& setup)
+struct SavedMemoryPatch
 {
-    for (const auto& [address, value] : setup) {
-        memory[address] = value;
+    static constexpr std::uint16_t addresses[] = {
+        safe_restart_address + 0u,
+        safe_restart_address + 1u,
+        safe_restart_address + 2u,
+        0xfffcu,
+        0xfffdu
+    };
+
+    std::uint8_t values[sizeof(addresses) / sizeof(addresses[0])]{};
+    bool active = false;
+
+    void save(cpu6502_bridge::ICpu& cpu) noexcept
+    {
+        auto* memory = cpu.memory();
+        for (std::size_t i = 0u; i < sizeof(addresses) / sizeof(addresses[0]); ++i) {
+            values[i] = memory[addresses[i]];
+        }
+        active = true;
     }
-}
+
+    void restore(cpu6502_bridge::ICpu& cpu) noexcept
+    {
+        if (!active) {
+            return;
+        }
+
+        auto* memory = cpu.memory();
+        for (std::size_t i = 0u; i < sizeof(addresses) / sizeof(addresses[0]); ++i) {
+            memory[addresses[i]] = values[i];
+        }
+        active = false;
+    }
+};
 
 void copy_memory_to_cpu(cpu6502_bridge::ICpu& cpu, const memory_image& image)
 {
@@ -31,6 +64,25 @@ void apply_mem_values_to_cpu(cpu6502_bridge::ICpu& cpu, const memory_setup& setu
     for (const auto& [address, value] : setup) {
         memory[address] = value;
     }
+}
+
+void write_vector_to_cpu(cpu6502_bridge::ICpu& cpu,
+                         std::uint16_t vector_address,
+                         std::uint16_t target)
+{
+    auto* memory = cpu.memory();
+    memory[vector_address] = static_cast<std::uint8_t>(target & 0xffu);
+    memory[static_cast<std::uint16_t>(vector_address + 1u)] =
+        static_cast<std::uint8_t>((target >> 8u) & 0xffu);
+}
+
+void install_safe_restart_stub(cpu6502_bridge::ICpu& cpu)
+{
+    auto* memory = cpu.memory();
+    memory[safe_restart_address + 0u] = opcode_nop;
+    memory[safe_restart_address + 1u] = opcode_nop;
+    memory[safe_restart_address + 2u] = opcode_nop;
+    write_vector_to_cpu(cpu, 0xfffcu, safe_restart_address);
 }
 
 void initialize_memory_image(memory_image& image, const MemoryInit& init)
@@ -96,10 +148,24 @@ bool restart_to_reset_fetch(cpu6502_bridge::ICpu& cpu)
     return cpu_at_fetch_at(cpu, target);
 }
 
-bool step_to_fetch_at_without_compare(cpu6502_bridge::ICpu& cpu,
-                                      std::uint16_t address)
+bool step_to_next_fetch_without_compare(cpu6502_bridge::ICpu& cpu,
+                                        unsigned max_steps)
 {
-    for (unsigned steps = 0u; steps < setup_bootstrap_max_steps; ++steps) {
+    for (unsigned steps = 0u; steps < max_steps; ++steps) {
+        cpu.step();
+        if (cpu.is_opcode_fetch() && !cpu.is_write()) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool step_to_fetch_at_without_compare(cpu6502_bridge::ICpu& cpu,
+                                      std::uint16_t address,
+                                      unsigned max_steps = setup_bootstrap_max_steps)
+{
+    for (unsigned steps = 0u; steps < max_steps; ++steps) {
         if (cpu_at_fetch_at(cpu, address)) {
             return true;
         }
@@ -107,6 +173,84 @@ bool step_to_fetch_at_without_compare(cpu6502_bridge::ICpu& cpu,
     }
 
     return cpu_at_fetch_at(cpu, address);
+}
+
+bool hard_restart_to_safe_fetch(cpu6502_bridge::ICpu& cpu,
+                                SavedMemoryPatch& patch)
+{
+    cpu.irq(false);
+    cpu.nmi(false);
+    patch.save(cpu);
+    install_safe_restart_stub(cpu);
+    cpu.restart_to_start_fetch(setup_restart_max_steps);
+    return cpu_at_fetch_at(cpu, safe_restart_address);
+}
+
+testcase make_temporary_bootstrap_testcase(const testcase& test)
+{
+    auto temporary = test;
+    temporary.vectors.reset = internal_bootstrap_address;
+    temporary.vectors.brk_irq = internal_bootstrap_address;
+    temporary.vectors.nmi = internal_bootstrap_address;
+    return temporary;
+}
+
+void install_user_testcase(cpu6502_bridge::ICpu& cpu, const testcase& test)
+{
+    apply_mem_values_to_cpu(cpu, test.mem_setup);
+    apply_mem_values_to_cpu(cpu, test.program);
+    write_vector_to_cpu(cpu, 0xfffcu, test.vectors.reset);
+    write_vector_to_cpu(cpu, 0xfffau, test.vectors.nmi);
+    write_vector_to_cpu(cpu, 0xfffeu, test.vectors.brk_irq);
+}
+
+bool try_soft_setup_and_run(cpu6502_bridge::ICpu& cpu,
+                            const testcase& test,
+                            SavedMemoryPatch* hard_restart_patch = nullptr)
+{
+    const auto temporary_test = make_temporary_bootstrap_testcase(test);
+    const auto temporary_bootstrap = make_bootstrap(temporary_test);
+
+    apply_mem_values_to_cpu(cpu, temporary_bootstrap);
+    cpu.nmi(false);
+    cpu.irq(false);
+
+    if (!step_to_next_fetch_without_compare(cpu, setup_fetch_max_steps)) {
+        return false;
+    }
+
+    cpu.nmi(true);
+    const bool entered_bootstrap =
+        step_to_fetch_at_without_compare(cpu, internal_bootstrap_address, setup_fetch_max_steps);
+    cpu.nmi(false);
+
+    if (!entered_bootstrap) {
+        return false;
+    }
+
+    if (hard_restart_patch != nullptr) {
+        hard_restart_patch->restore(cpu);
+    }
+
+    install_user_testcase(cpu, test);
+    return step_to_fetch_at_without_compare(cpu, test.start_at, setup_bootstrap_max_steps);
+}
+
+bool setup_and_run_one_backend(cpu6502_bridge::ICpu& cpu, const testcase& test)
+{
+    if (try_soft_setup_and_run(cpu, test)) {
+        return true;
+    }
+
+    SavedMemoryPatch hard_restart_patch{};
+    if (!hard_restart_to_safe_fetch(cpu, hard_restart_patch)) {
+        hard_restart_patch.restore(cpu);
+        return false;
+    }
+
+    const bool setup_completed = try_soft_setup_and_run(cpu, test, &hard_restart_patch);
+    hard_restart_patch.restore(cpu);
+    return setup_completed;
 }
 
 CpuTraceEntry capture_trace(const cpu6502_bridge::ICpu& cpu,
@@ -221,36 +365,12 @@ bool LockstepRunner::setup_and_run(const testcase& test,
     compare_ = config.compare;
     cycle_ = 0u;
 
-    const auto bootstrap = make_bootstrap(test);
+    initialize_cpu_pair_memory(*left_, *right_, config.memory);
 
-    if (initializes_full_memory(config.memory)) {
-        memory_image image{};
-        initialize_memory_image(image, config.memory);
-        apply_mem_values(image, test.mem_setup);
-        apply_mem_values(image, test.program);
-        apply_mem_values(image, bootstrap);
-        copy_memory_to_cpu(*left_, image);
-        copy_memory_to_cpu(*right_, image);
-    } else {
-        apply_mem_values_to_cpu(*left_, test.mem_setup);
-        apply_mem_values_to_cpu(*right_, test.mem_setup);
-        apply_mem_values_to_cpu(*left_, test.program);
-        apply_mem_values_to_cpu(*right_, test.program);
-        apply_mem_values_to_cpu(*left_, bootstrap);
-        apply_mem_values_to_cpu(*right_, bootstrap);
-    }
-
-    if (!restart_to_reset_fetch(*left_)) {
+    if (!setup_and_run_one_backend(*left_, test)) {
         return false;
     }
-    if (!restart_to_reset_fetch(*right_)) {
-        return false;
-    }
-
-    if (!step_to_fetch_at_without_compare(*left_, test.start_at)) {
-        return false;
-    }
-    if (!step_to_fetch_at_without_compare(*right_, test.start_at)) {
+    if (!setup_and_run_one_backend(*right_, test)) {
         return false;
     }
 
@@ -359,7 +479,7 @@ bool LockstepScenarioRunner::setup(const testcase& test,
 {
     test_ = test;
     lockstep_config_ = lockstep_config;
-    has_setup_ = lockstep_.setup_and_run(test_, lockstep_config_);
+    has_setup_ = true;
     return has_setup_;
 }
 
