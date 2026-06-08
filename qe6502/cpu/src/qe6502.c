@@ -648,16 +648,7 @@ static qe6502_tick_t mc_stack_pull_read(qe6502_t* cpu, uint8_t bus)
     return stack_read(cpu);
 }
 
-static qe6502_tick_t mc_internal_reset_c0(qe6502_t* cpu, uint8_t bus)
-{
-    cpu->latch_data++;
-    cpu->PC = (uint16_t)(bus << 8);
-    qe6502_tick_t tick = read(cpu, cpu->PC);
-    tick.status = flag_on(tick.status, qe6502_status_internal_reset);
-    return tick;
-}
-
-static qe6502_tick_t mc_internal_reset_c1(qe6502_t* cpu, uint8_t bus)
+static qe6502_tick_t mc_internal_reset(qe6502_t* cpu, uint8_t bus)
 {
     cpu->latch_data++;
     cpu->PC = calculate_reset_pc(cpu->PC, bus);
@@ -666,7 +657,7 @@ static qe6502_tick_t mc_internal_reset_c1(qe6502_t* cpu, uint8_t bus)
         next_enter_service_slot(cpu, service_slot_reset_0, 0);
         return read(cpu, cpu->PC);
     }
-    // else
+    /* else */
     loop_here(cpu);
     qe6502_tick_t tick = read(cpu, cpu->PC);
     tick.status = flag_on(tick.status, qe6502_status_internal_reset);
@@ -729,11 +720,6 @@ static qe6502_tick_t mc_latch_pch_reset_fetch(qe6502_t* cpu, uint8_t bus)
 static qe6502_tick_t mc_latch_pch_nmi_fetch(qe6502_t* cpu, uint8_t bus)
 {
     cpu->PC = u16_set_byte(cpu->PC, 1, bus);
-    // if(flag(cpu->interrupts, qe6502_interrupt_nmi_inv_pin) == 0)
-    // {
-    //     cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_edge);
-    // }
-    //update_nmi_last_sampled(cpu);
     return fetch(cpu);
 }
 
@@ -924,11 +910,25 @@ static inline qe6502_tick_t mc_irq_c3_push_p(qe6502_t* cpu, uint8_t bus)
 }
 
 /* interrupt_handler; role=push_p; action=push_hardware_interrupt_status_to_stack */
-static inline qe6502_tick_t mc_cmos_interrupt_c3_push_p(qe6502_t* cpu, uint8_t bus)
+static inline qe6502_tick_t mc_cmos_nmi_c3_push_p(qe6502_t* cpu, uint8_t bus)
 {
     (void)bus;
 
+    cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_edge);
+    cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_nmi_taken);
+    update_nmi_last_sampled(cpu);
+
     return stack_write(cpu, stack_status(cpu->P, 0u));
+}
+
+/* interrupt_handler; role=push_p; action=push_hardware_interrupt_status_to_stack */
+static inline qe6502_tick_t mc_cmos_irq_c3_push_p(qe6502_t* cpu, uint8_t bus)
+{
+    (void)bus;
+
+    qe6502_tick_t tick = stack_write(cpu, stack_status(cpu->P, 0u));
+    cpu->interrupts = flag_off(cpu->interrupts, qe6502_interrupt_irq_taken);
+    return tick;
 }
 
 /* interrupt_handler; role=vec_lo; action=read_nmi_vector_low_and_mark_nmi_ack */
@@ -2778,35 +2778,11 @@ QE6502_ABI_API qe6502abi_tick_t qe6502abi_tick(qe6502abi_context_t *ctx, uint32_
     return pack_tick(qe6502_tick(&impl->cpu, (uint8_t)bus));
 }
 
-QE6502_ABI_API qe6502abi_tick_t qe6502abi_reset(qe6502abi_context_t *ctx)
-{
-    qe6502abi_impl_t *impl = qe6502abi_impl(ctx);
-    return pack_tick(qe6502_reset(&impl->cpu));
-}
-
 QE6502_ABI_API qe6502abi_tick_t qe6502abi_goto(qe6502abi_context_t *ctx, uint32_t address)
 {
     qe6502abi_impl_t *impl = qe6502abi_impl(ctx);
     return pack_tick(qe6502_goto(&impl->cpu, (uint16_t)address));
 }
-
-// QE6502_ABI_API void qe6502abi_nmi(qe6502abi_context_t *ctx)
-// {
-//     qe6502abi_impl_t *impl = qe6502abi_impl(ctx);
-//     qe6502_nmi(&impl->cpu);
-// }
-
-// QE6502_ABI_API void qe6502abi_set_irq(qe6502abi_context_t *ctx, uint32_t pin)
-// {
-//     qe6502abi_impl_t *impl = qe6502abi_impl(ctx);
-//     qe6502_set_irq(&impl->cpu, (uint8_t)pin);
-// }
-
-// QE6502_ABI_API uint32_t qe6502abi_get_irq(const qe6502abi_context_t *ctx)
-// {
-//     const qe6502abi_impl_t *impl = qe6502abi_const_impl(ctx);
-//     return qe6502_get_irq(&impl->cpu);
-// }
 
 QE6502_ABI_API void qe6502abi_nmi_assert(qe6502abi_context_t *ctx, uint8_t assert_nmi)
 {
@@ -3002,24 +2978,16 @@ qe6502_tick_t qe6502_restart(qe6502_t *cpu)
 
     *cpu = (qe6502_t){0};
     cpu->model = model;
-    cpu->PC = 0x00ff;
+    cpu->PC = 0x01ff;
     cpu->S = 0xc0u;
     cpu->X = 0xc0u;
     cpu->P = qe6502_flag_Z;
     enter_service_slot(cpu, service_slot_internal_reset, 0);
 
-    cpu->latch_data = 1;
-    qe6502_tick_t tick = read(cpu, cpu->PC);
+    cpu->latch_data = 0;
+    qe6502_tick_t tick = read(cpu, 0x00ff);
     tick.status = flag_on(tick.status, qe6502_status_internal_reset);
     return tick;
-}
-
-qe6502_tick_t qe6502_reset(qe6502_t *cpu)
-{
-    cpu->status = 0;
-    cpu->interrupts = 0;
-    enter_service_slot_cycle(cpu, service_slot_reset_0, 3u);
-    return qe6502_tick(cpu, 0u);
 }
 
 void qe6502_save(const qe6502_t *cpu,

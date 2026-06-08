@@ -23,11 +23,6 @@ void cpu::restart() noexcept
     tick_ = qe6502_restart(&cpu_);
 }
 
-void cpu::reset() noexcept
-{
-    tick_ = qe6502_reset(&cpu_);
-}
-
 void cpu::jump_to(std::uint16_t address) noexcept
 {
     tick_ = qe6502_goto(&cpu_, address);

@@ -152,9 +152,6 @@ extern const qe6502_microcode_fn qe6502_control_store[qe6502_control_store_size]
 /* Restart the CPU context and return an initial dummy read request at address 0x00ff. */
 qe6502_tick_t qe6502_restart(qe6502_t *cpu);
 
-/* Enter reset-vector service and return the first bus request. */
-qe6502_tick_t qe6502_reset(qe6502_t *cpu);
-
 /* Enter execution at address and return the first bus request. */
 qe6502_tick_t qe6502_goto(qe6502_t *cpu, uint16_t address);
 

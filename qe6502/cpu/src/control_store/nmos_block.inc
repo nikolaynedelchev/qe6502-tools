@@ -6,8 +6,7 @@
 
         [SERVICE_SLOT_IDX(qe6502_model_nmos, service_slot_illegal_ext, 0)] = &mc_dispatch,
 
-        [SERVICE_SLOT_IDX(qe6502_model_nmos, service_slot_internal_reset, 0)] = &mc_internal_reset_c0,
-        [SERVICE_SLOT_IDX(qe6502_model_nmos, service_slot_internal_reset, 1)] = &mc_internal_reset_c1,
+        [SERVICE_SLOT_IDX(qe6502_model_nmos, service_slot_internal_reset, 0)] = &mc_internal_reset,
 
         [SERVICE_SLOT_IDX(qe6502_model_nmos, service_slot_reset_0, 0)] = &mc_restart_read_hhff,
         [SERVICE_SLOT_IDX(qe6502_model_nmos, service_slot_reset_0, 1)] = &mc_restart_read_zzhh_fetch,

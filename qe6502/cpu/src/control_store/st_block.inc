@@ -6,8 +6,7 @@
 
         [SERVICE_SLOT_IDX(qe6502_model_st, service_slot_illegal_ext, 0)] = &mc_dispatch,
 
-        [SERVICE_SLOT_IDX(qe6502_model_st, service_slot_internal_reset, 0)] = &mc_internal_reset_c0,
-        [SERVICE_SLOT_IDX(qe6502_model_st, service_slot_internal_reset, 1)] = &mc_internal_reset_c1,
+        [SERVICE_SLOT_IDX(qe6502_model_st, service_slot_internal_reset, 0)] = &mc_internal_reset,
 
         [SERVICE_SLOT_IDX(qe6502_model_st, service_slot_reset_0, 0)] = &mc_restart_read_hhff,
         [SERVICE_SLOT_IDX(qe6502_model_st, service_slot_reset_0, 1)] = &mc_restart_read_zzhh_fetch,
@@ -26,7 +25,7 @@
         [SERVICE_SLOT_IDX(qe6502_model_st, service_slot_nmi, 0)] = &mc_read_pc,
         [SERVICE_SLOT_IDX(qe6502_model_st, service_slot_nmi, 1)] = &mc_stack_push_pc_high,
         [SERVICE_SLOT_IDX(qe6502_model_st, service_slot_nmi, 2)] = &mc_stack_push_pc_low,
-        [SERVICE_SLOT_IDX(qe6502_model_st, service_slot_nmi, 3)] = &mc_cmos_interrupt_c3_push_p,
+        [SERVICE_SLOT_IDX(qe6502_model_st, service_slot_nmi, 3)] = &mc_cmos_nmi_c3_push_p,
         [SERVICE_SLOT_IDX(qe6502_model_st, service_slot_nmi, 4)] = &mc_nmi_c4_vec_lo,
         [SERVICE_SLOT_IDX(qe6502_model_st, service_slot_nmi, 5)] = &mc_cmos_nmi_c5_vec_hi,
         [SERVICE_SLOT_IDX(qe6502_model_st, service_slot_nmi, 6)] = &mc_latch_pch_nmi_fetch,
@@ -35,7 +34,7 @@
         [SERVICE_SLOT_IDX(qe6502_model_st, service_slot_irq, 0)] = &mc_read_pc,
         [SERVICE_SLOT_IDX(qe6502_model_st, service_slot_irq, 1)] = &mc_stack_push_pc_high,
         [SERVICE_SLOT_IDX(qe6502_model_st, service_slot_irq, 2)] = &mc_stack_push_pc_low,
-        [SERVICE_SLOT_IDX(qe6502_model_st, service_slot_irq, 3)] = &mc_cmos_interrupt_c3_push_p,
+        [SERVICE_SLOT_IDX(qe6502_model_st, service_slot_irq, 3)] = &mc_cmos_irq_c3_push_p,
         [SERVICE_SLOT_IDX(qe6502_model_st, service_slot_irq, 4)] = &mc_irq_c4_vec_lo,
         [SERVICE_SLOT_IDX(qe6502_model_st, service_slot_irq, 5)] = &mc_cmos_irq_c5_vec_hi,
         [SERVICE_SLOT_IDX(qe6502_model_st, service_slot_irq, 6)] = &mc_latch_pch_irq_fetch,
