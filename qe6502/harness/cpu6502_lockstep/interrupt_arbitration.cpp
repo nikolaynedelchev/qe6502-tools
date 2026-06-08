@@ -52,6 +52,7 @@ struct FirstFailure
 {
     bool set = false;
     std::string group{};
+    std::string scenario{};
     std::size_t pulse_start = 0u;
     std::size_t pulse_length = 0u;
     tools6502::LockstepScenarioResult scenario_result{};
@@ -69,10 +70,10 @@ tools6502::memory_setup make_handlers()
     return asm6502::Asm6502::New()
         .begin()
             .org(nmi_handler, "nmi_handler")
-                .nop()
+                .inx()
                 .jmp("nmi_handler")
             .org(brk_irq_handler, "brk_irq_handler")
-                .nop()
+                .iny()
                 .jmp("brk_irq_handler")
         .end().compile();
 }
@@ -109,6 +110,38 @@ ArbitrationCase make_brk_case(const char* name)
     return ArbitrationCase{name, std::move(test)};
 }
 
+ArbitrationCase make_overlap_case(const char* name)
+{
+    auto program = asm6502::Asm6502::New()
+        .begin()
+            .org(program_start)
+                .nop()
+                .nop()
+                .nop()
+                .nop()
+        .end().compile();
+
+    const auto handlers = make_handlers();
+    program.insert(program.end(), handlers.begin(), handlers.end());
+
+    tools6502::testcase test{};
+    test.opcode = 0xeau;
+    test.bytes = 1u;
+    test.start_at = program_start;
+    test.vectors.reset = 0x0200u;
+    test.vectors.nmi = nmi_handler;
+    test.vectors.brk_irq = brk_irq_handler;
+    test.A = 0x00u;
+    test.X = 0x00u;
+    test.Y = 0x00u;
+    test.P = 0x20u;
+    test.S = 0xfdu;
+    test.program = std::move(program);
+    test.description = name;
+
+    return ArbitrationCase{name, std::move(test)};
+}
+
 FirstHandlerFetch observe_first_handler_fetch(const tools6502::LockstepScenarioResult& result)
 {
     for (const auto& command_result : result.results) {
@@ -126,6 +159,51 @@ FirstHandlerFetch observe_first_handler_fetch(const tools6502::LockstepScenarioR
     }
 
     return FirstHandlerFetch::None;
+}
+
+tools6502::LockstepConfig make_lockstep_config()
+{
+    tools6502::LockstepConfig lockstep_config{};
+    lockstep_config.memory = tools6502::MemoryFill{0xeau};
+    lockstep_config.compare.address = true;
+    lockstep_config.compare.data = true;
+    lockstep_config.compare.read_write = true;
+    lockstep_config.compare.opcode_fetch = true;
+    lockstep_config.compare.registers_on_fetch = false;
+    return lockstep_config;
+}
+
+tools6502::LockstepScenarioConfig make_scenario_config()
+{
+    tools6502::LockstepScenarioConfig scenario_config{};
+    scenario_config.stop_on_failure = true;
+    return scenario_config;
+}
+
+void record_result(const tools6502::LockstepScenarioResult& result,
+                   SummaryStats& summary,
+                   GroupStats& group)
+{
+    ++summary.scenarios_total;
+    ++group.scenarios;
+
+    const auto first_handler = observe_first_handler_fetch(result);
+    if (first_handler == FirstHandlerFetch::Nmi) {
+        ++summary.nmi_first_handler_fetches;
+        ++group.nmi_first_handler_fetches;
+    }
+    if (first_handler == FirstHandlerFetch::BrkIrq) {
+        ++summary.brk_irq_first_handler_fetches;
+        ++group.brk_irq_first_handler_fetches;
+    }
+
+    if (result.passed) {
+        ++summary.scenarios_passed;
+        ++group.passed;
+    } else {
+        ++summary.scenarios_failed;
+        ++group.failures;
+    }
 }
 
 bool run_one_pulse_scenario(tools6502::LockstepScenarioRunner& runner,
@@ -146,31 +224,16 @@ bool run_one_pulse_scenario(tools6502::LockstepScenarioRunner& runner,
 
     const auto result = runner.restart_run(script, scenario_config);
 
-    ++summary.scenarios_total;
-    ++group.scenarios;
-
-    const auto first_handler = observe_first_handler_fetch(result);
-    if (first_handler == FirstHandlerFetch::Nmi) {
-        ++summary.nmi_first_handler_fetches;
-        ++group.nmi_first_handler_fetches;
-    }
-    if (first_handler == FirstHandlerFetch::BrkIrq) {
-        ++summary.brk_irq_first_handler_fetches;
-        ++group.brk_irq_first_handler_fetches;
-    }
+    record_result(result, summary, group);
 
     if (result.passed) {
-        ++summary.scenarios_passed;
-        ++group.passed;
         return true;
     }
-
-    ++summary.scenarios_failed;
-    ++group.failures;
 
     if (!first_failure.set) {
         first_failure.set = true;
         first_failure.group = group_name;
+        first_failure.scenario = "pulse";
         first_failure.pulse_start = pulse_start;
         first_failure.pulse_length = pulse_length;
         first_failure.scenario_result = result;
@@ -185,16 +248,8 @@ GroupStats run_pulse_group(const char* group_name,
                            SummaryStats& summary,
                            FirstFailure& first_failure)
 {
-    tools6502::LockstepConfig lockstep_config{};
-    lockstep_config.memory = tools6502::MemoryFill{0xeau};
-    lockstep_config.compare.address = true;
-    lockstep_config.compare.data = true;
-    lockstep_config.compare.read_write = true;
-    lockstep_config.compare.opcode_fetch = true;
-    lockstep_config.compare.registers_on_fetch = false;
-
-    tools6502::LockstepScenarioConfig scenario_config{};
-    scenario_config.stop_on_failure = true;
+    const auto lockstep_config = make_lockstep_config();
+    const auto scenario_config = make_scenario_config();
 
     tools6502::LockstepScenarioRunner runner(
         cpu6502_bridge::make_qe6502_cpu(),
@@ -235,6 +290,158 @@ GroupStats run_pulse_group(const char* group_name,
     return group;
 }
 
+std::vector<tools6502::LockstepCommand> make_same_cycle_overlap_script()
+{
+    return {
+        tools6502::IrqAssert{},
+        tools6502::NmiAssert{},
+        tools6502::StepCycles{2u},
+        tools6502::NmiDeassert{},
+        tools6502::IrqDeassert{},
+        tools6502::StepCycles{26u},
+    };
+}
+
+std::vector<tools6502::LockstepCommand> make_irq_first_overlap_script()
+{
+    return {
+        tools6502::IrqAssert{},
+        tools6502::StepCycles{1u},
+        tools6502::NmiAssert{},
+        tools6502::StepCycles{2u},
+        tools6502::NmiDeassert{},
+        tools6502::IrqDeassert{},
+        tools6502::StepCycles{25u},
+    };
+}
+
+std::vector<tools6502::LockstepCommand> make_nmi_first_overlap_script()
+{
+    return {
+        tools6502::NmiAssert{},
+        tools6502::StepCycles{1u},
+        tools6502::IrqAssert{},
+        tools6502::StepCycles{2u},
+        tools6502::NmiDeassert{},
+        tools6502::IrqDeassert{},
+        tools6502::StepCycles{25u},
+    };
+}
+
+std::vector<tools6502::LockstepCommand> make_irq_held_nmi_pulse_script()
+{
+    return {
+        tools6502::IrqAssert{},
+        tools6502::StepCycles{2u},
+        tools6502::NmiAssert{},
+        tools6502::StepCycles{1u},
+        tools6502::NmiDeassert{},
+        tools6502::StepCycles{4u},
+        tools6502::IrqDeassert{},
+        tools6502::StepCycles{21u},
+    };
+}
+
+std::vector<tools6502::LockstepCommand> make_nmi_pulse_irq_held_after_script()
+{
+    return {
+        tools6502::NmiAssert{},
+        tools6502::StepCycles{1u},
+        tools6502::NmiDeassert{},
+        tools6502::StepCycles{1u},
+        tools6502::IrqAssert{},
+        tools6502::StepCycles{26u},
+        tools6502::IrqDeassert{},
+    };
+}
+
+std::vector<tools6502::LockstepCommand> make_nmi_deasserts_first_overlap_script()
+{
+    return {
+        tools6502::IrqAssert{},
+        tools6502::NmiAssert{},
+        tools6502::StepCycles{3u},
+        tools6502::NmiDeassert{},
+        tools6502::StepCycles{3u},
+        tools6502::IrqDeassert{},
+        tools6502::StepCycles{22u},
+    };
+}
+
+std::vector<tools6502::LockstepCommand> make_irq_deasserts_first_overlap_script()
+{
+    return {
+        tools6502::IrqAssert{},
+        tools6502::NmiAssert{},
+        tools6502::StepCycles{3u},
+        tools6502::IrqDeassert{},
+        tools6502::StepCycles{3u},
+        tools6502::NmiDeassert{},
+        tools6502::StepCycles{22u},
+    };
+}
+
+struct OverlapScenario
+{
+    const char* name = "";
+    std::vector<tools6502::LockstepCommand> script{};
+};
+
+std::vector<OverlapScenario> make_overlap_scenarios()
+{
+    return {
+        {"IRQ and NMI asserted same cycle", make_same_cycle_overlap_script()},
+        {"IRQ asserted first, NMI one cycle later", make_irq_first_overlap_script()},
+        {"NMI asserted first, IRQ one cycle later", make_nmi_first_overlap_script()},
+        {"IRQ held, short NMI pulse", make_irq_held_nmi_pulse_script()},
+        {"NMI pulse, IRQ held after", make_nmi_pulse_irq_held_after_script()},
+        {"IRQ/NMI overlap, NMI deasserts first", make_nmi_deasserts_first_overlap_script()},
+        {"IRQ/NMI overlap, IRQ deasserts first", make_irq_deasserts_first_overlap_script()},
+    };
+}
+
+GroupStats run_overlap_group(const char* group_name,
+                             const ArbitrationCase& test_case,
+                             SummaryStats& summary,
+                             FirstFailure& first_failure)
+{
+    const auto lockstep_config = make_lockstep_config();
+    const auto scenario_config = make_scenario_config();
+    const auto scenarios = make_overlap_scenarios();
+
+    tools6502::LockstepScenarioRunner runner(
+        cpu6502_bridge::make_qe6502_cpu(),
+        cpu6502_bridge::make_perfect6502_cpu());
+
+    GroupStats group{};
+    if (!runner.setup(test_case.test, lockstep_config)) {
+        ++summary.scenarios_total;
+        ++summary.scenarios_failed;
+        ++group.scenarios;
+        ++group.failures;
+        if (!first_failure.set) {
+            first_failure.set = true;
+            first_failure.group = group_name;
+            first_failure.scenario = "setup";
+        }
+        return group;
+    }
+
+    for (const auto& scenario : scenarios) {
+        const auto result = runner.restart_run(scenario.script, scenario_config);
+        record_result(result, summary, group);
+
+        if (!result.passed && !first_failure.set) {
+            first_failure.set = true;
+            first_failure.group = group_name;
+            first_failure.scenario = scenario.name;
+            first_failure.scenario_result = result;
+        }
+    }
+
+    return group;
+}
+
 } // namespace
 
 int main()
@@ -244,28 +451,11 @@ int main()
 
     const auto brk_nmi_case = make_brk_case("BRK + NMI hijack windows");
     const auto brk_irq_case = make_brk_case("BRK + IRQ windows");
+    const auto overlap_case = make_overlap_case("IRQ/NMI overlap priority");
 
-    struct GroupSpec
-    {
-        const char* name;
-        const ArbitrationCase* test_case;
-        bool nmi;
-    };
-
-    const std::vector<GroupSpec> groups{
-        {"BRK + NMI hijack windows", &brk_nmi_case, true},
-        {"BRK + IRQ windows", &brk_irq_case, false},
-    };
-
-    for (const auto& spec : groups) {
-        ++summary.groups_total;
-        const auto group = run_pulse_group(
-            spec.name,
-            *spec.test_case,
-            spec.nmi,
-            summary,
-            first_failure);
-
+    auto report_group = [&summary](const char* name,
+                                   const GroupStats& group,
+                                   std::size_t hijacks) {
         const bool group_passed = group.failures == 0u;
         if (group_passed) {
             ++summary.groups_passed;
@@ -273,14 +463,44 @@ int main()
             ++summary.groups_failed;
         }
 
-        std::cout << spec.name << ": " << (group_passed ? "PASS" : "FAIL")
+        std::cout << name << ": " << (group_passed ? "PASS" : "FAIL")
                   << " scenarios=" << group.scenarios
                   << " failures=" << group.failures
-                  << " hijacks=" << (spec.nmi ? group.nmi_first_handler_fetches : 0u)
+                  << " hijacks=" << hijacks
                   << " nmi_first_handler_fetches=" << group.nmi_first_handler_fetches
                   << " brk_irq_first_handler_fetches=" << group.brk_irq_first_handler_fetches
                   << '\n' << std::flush;
-    }
+    };
+
+    ++summary.groups_total;
+    const auto brk_nmi_group = run_pulse_group(
+        "BRK + NMI hijack windows",
+        brk_nmi_case,
+        true,
+        summary,
+        first_failure);
+    report_group("BRK + NMI hijack windows",
+                 brk_nmi_group,
+                 brk_nmi_group.nmi_first_handler_fetches);
+
+    ++summary.groups_total;
+    const auto brk_irq_group = run_pulse_group(
+        "BRK + IRQ windows",
+        brk_irq_case,
+        false,
+        summary,
+        first_failure);
+    report_group("BRK + IRQ windows", brk_irq_group, 0u);
+
+    ++summary.groups_total;
+    const auto overlap_group = run_overlap_group(
+        "IRQ/NMI overlap priority",
+        overlap_case,
+        summary,
+        first_failure);
+    report_group("IRQ/NMI overlap priority",
+                 overlap_group,
+                 overlap_group.nmi_first_handler_fetches);
 
     std::cout << "\nsummary\n"
               << "  groups:    total=" << summary.groups_total
@@ -294,8 +514,11 @@ int main()
 
     if (first_failure.set) {
         std::cout << "\nfirst failure\n"
-                  << "  group:        " << first_failure.group << '\n'
-                  << "  pulse_start:  " << first_failure.pulse_start << '\n'
+                  << "  group:        " << first_failure.group << '\n';
+        if (!first_failure.scenario.empty()) {
+            std::cout << "  scenario:     " << first_failure.scenario << '\n';
+        }
+        std::cout << "  pulse_start:  " << first_failure.pulse_start << '\n'
                   << "  pulse_length: " << first_failure.pulse_length << '\n';
 
         if (first_failure.scenario_result.first_failed_command) {
