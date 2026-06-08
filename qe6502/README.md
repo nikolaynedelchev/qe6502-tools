@@ -237,6 +237,21 @@ try {
 
 The JavaScript wrapper exposes the same bus-driven execution model as the C and C++ APIs. In browsers, use `loadQe6502Browser()` instead of `loadQe6502Node()`. JavaScript CPU objects own a WASM-side context, so call `dispose()` when the CPU is no longer needed.
 
+Interrupt input pins are controlled explicitly through assert/deassert calls:
+
+```js
+cpu.irqAssert(true);          // assert the IRQ line
+cpu.irqAssert(false);          // deassert the IRQ line
+
+cpu.nmiAssert(true);          // assert the NMI line
+cpu.nmiAssert(false);          // deassert the NMI line
+
+console.log(cpu.isIrqAsserted());
+console.log(cpu.isNmiAsserted());
+```
+
+`nmiAssert()` is a pin-level API, not a one-shot pulse helper. Keep the line asserted for as long as your emulated device drives it active, then deassert it.
+
 ## Save/load snapshots
 
 `qe6502` supports a stable fixed-size 64-byte save/load snapshot format. A snapshot captures the complete CPU state, including the current internal bus-cycle phase, so restored execution resumes deterministically rather than only restoring the visible registers.

@@ -20,12 +20,11 @@ export const Flag = Object.freeze({
 export const Status = Object.freeze({
   writing: 1 << 0,
   fetch: 1 << 1,
-  nmiAck: 1 << 2,
-  irqAck: 1 << 3,
+  internalReset: 1 << 6,
   cpuJammed: 1 << 7,
 });
 
-const ABI_VERSION = 0x00000003;
+const ABI_VERSION = 0x00000004;
 const SNAPSHOT_SIZE = 64;
 
 const TICK_ADDRESS_MASK = 0xffff;
@@ -39,7 +38,6 @@ const REQUIRED_EXPORTS = [
   "qe6502abi_version",
   "qe6502abi_setup",
   "qe6502abi_restart",
-  "qe6502abi_reset",
   "qe6502abi_goto",
   "qe6502abi_irq_assert",
   "qe6502abi_is_irq_asserted",
@@ -92,6 +90,14 @@ function normalizeModel(value) {
 
 function byte(value) {
   return Number(value) & 0xff;
+}
+
+function bool(value) {
+  if (typeof value !== "boolean") {
+    throw new TypeError("Expected a boolean");
+  }
+
+  return value ? 1 : 0;
 }
 
 function word(value) {
@@ -217,11 +223,6 @@ export class Qe6502Cpu {
     return this.#storeTick(this.#runtime.exports.qe6502abi_restart(this.#ptr));
   }
 
-  reset() {
-    this.#assertAlive();
-    return this.#storeTick(this.#runtime.exports.qe6502abi_reset(this.#ptr));
-  }
-
   jumpTo(address) {
     this.#assertAlive();
     return this.#storeTick(
@@ -229,19 +230,24 @@ export class Qe6502Cpu {
     );
   }
 
-  setIrq(pin) {
+  irqAssert(assertIrq) {
     this.#assertAlive();
-    this.#runtime.exports.qe6502abi_set_irq(this.#ptr, byte(pin));
+    this.#runtime.exports.qe6502abi_irq_assert(this.#ptr, bool(assertIrq));
   }
 
-  getIrq() {
+  isIrqAsserted() {
     this.#assertAlive();
-    return this.#runtime.exports.qe6502abi_get_irq(this.#ptr) & 0xff;
+    return (this.#runtime.exports.qe6502abi_is_irq_asserted(this.#ptr) & 0xff) !== 0;
   }
 
-  nmi() {
+  nmiAssert(assertNmi) {
     this.#assertAlive();
-    this.#runtime.exports.qe6502abi_nmi(this.#ptr);
+    this.#runtime.exports.qe6502abi_nmi_assert(this.#ptr, bool(assertNmi));
+  }
+
+  isNmiAsserted() {
+    this.#assertAlive();
+    return (this.#runtime.exports.qe6502abi_is_nmi_asserted(this.#ptr) & 0xff) !== 0;
   }
 
   tick(input = 0) {
@@ -274,6 +280,11 @@ export class Qe6502Cpu {
   isOpcodeFetch() {
     this.#assertAlive();
     return (this.busStatus() & Status.fetch) !== 0;
+  }
+
+  isInternalReset() {
+    this.#assertAlive();
+    return (this.busStatus() & Status.internalReset) !== 0;
   }
 
   isJammed() {

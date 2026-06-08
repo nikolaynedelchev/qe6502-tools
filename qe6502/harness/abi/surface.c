@@ -26,7 +26,6 @@ static const char *const qe6502abi_expected[] = {
     "qe6502abi_get_y",
     "qe6502abi_goto",
     "qe6502abi_load",
-    "qe6502abi_reset",
     "qe6502abi_restart",
     "qe6502abi_save",
     "qe6502abi_set_a",

@@ -112,13 +112,13 @@ if(QE6502_BUILD_SHARED)
             LINKER:--export=qe6502abi_version
             LINKER:--export=qe6502abi_setup
             LINKER:--export=qe6502abi_restart
-            LINKER:--export=qe6502abi_reset
             LINKER:--export=qe6502abi_goto
-            LINKER:--export=qe6502abi_set_irq
-            LINKER:--export=qe6502abi_get_irq
+            LINKER:--export=qe6502abi_irq_assert
+            LINKER:--export=qe6502abi_is_irq_asserted
             LINKER:--export=qe6502abi_save
             LINKER:--export=qe6502abi_load
-            LINKER:--export=qe6502abi_nmi
+            LINKER:--export=qe6502abi_nmi_assert
+            LINKER:--export=qe6502abi_is_nmi_asserted
             LINKER:--export=qe6502abi_tick
             LINKER:--export=qe6502abi_get_pc
             LINKER:--export=qe6502abi_set_pc

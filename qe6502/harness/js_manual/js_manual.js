@@ -104,6 +104,20 @@ function assertTrue(value, label) {
   }
 }
 
+function assertThrows(callback, expectedError, label) {
+  try {
+    callback();
+  } catch (error) {
+    if (error instanceof expectedError) {
+      return;
+    }
+
+    throw new Error(`${label}: expected ${expectedError.name}, got ${error}`);
+  }
+
+  throw new Error(`${label}: expected ${expectedError.name}`);
+}
+
 async function qe6502() {
   if (qePromise === undefined) {
     qePromise = loadQe6502Browser(WASM_URL);
@@ -205,10 +219,25 @@ async function runSmokeTest() {
     assertEqual(cpu.cpuModel(), Model.nmos, "model");
     assertEqual(cpu.busAddress(), 0x00ff, "restart bus address");
     assertEqual(cpu.busData(), 0x00, "restart bus data");
-    assertEqual(cpu.busStatus(), 0x00, "restart bus status");
+    assertEqual(cpu.busStatus(), Status.internalReset, "restart bus status");
     assertEqual(cpu.isWrite(), false, "restart isWrite");
     assertEqual(cpu.isOpcodeFetch(), false, "restart isOpcodeFetch");
+    assertEqual(cpu.isInternalReset(), true, "restart isInternalReset");
     assertEqual(cpu.isJammed(), false, "restart isJammed");
+
+    assertEqual(cpu.isIrqAsserted(), false, "initial IRQ asserted state");
+    cpu.irqAssert(true);
+    assertEqual(cpu.isIrqAsserted(), true, "asserted IRQ state");
+    cpu.irqAssert(false);
+    assertEqual(cpu.isIrqAsserted(), false, "deasserted IRQ state");
+    assertThrows(() => cpu.irqAssert(1), TypeError, "IRQ assert rejects non-boolean input");
+
+    assertEqual(cpu.isNmiAsserted(), false, "initial NMI asserted state");
+    cpu.nmiAssert(true);
+    assertEqual(cpu.isNmiAsserted(), true, "asserted NMI state");
+    cpu.nmiAssert(false);
+    assertEqual(cpu.isNmiAsserted(), false, "deasserted NMI state");
+    assertThrows(() => cpu.nmiAssert(1), TypeError, "NMI assert rejects non-boolean input");
 
     cpu.setPc(0x1234);
     cpu.setA(0x56);

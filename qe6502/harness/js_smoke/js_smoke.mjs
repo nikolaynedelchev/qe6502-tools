@@ -19,10 +19,25 @@ try {
   assert.equal(cpu.cpuModel(), Model.nmos);
   assert.equal(cpu.busAddress(), 0x00ff);
   assert.equal(cpu.busData(), 0x00);
-  assert.equal(cpu.busStatus(), 0x00);
+  assert.equal(cpu.busStatus(), Status.internalReset);
   assert.equal(cpu.isWrite(), false);
   assert.equal(cpu.isOpcodeFetch(), false);
+  assert.equal(cpu.isInternalReset(), true);
   assert.equal(cpu.isJammed(), false);
+
+  assert.equal(cpu.isIrqAsserted(), false);
+  cpu.irqAssert(true);
+  assert.equal(cpu.isIrqAsserted(), true);
+  cpu.irqAssert(false);
+  assert.equal(cpu.isIrqAsserted(), false);
+  assert.throws(() => cpu.irqAssert(1), TypeError);
+
+  assert.equal(cpu.isNmiAsserted(), false);
+  cpu.nmiAssert(true);
+  assert.equal(cpu.isNmiAsserted(), true);
+  cpu.nmiAssert(false);
+  assert.equal(cpu.isNmiAsserted(), false);
+  assert.throws(() => cpu.nmiAssert(1), TypeError);
 
   cpu.setPc(0x1234);
   cpu.setA(0x56);
