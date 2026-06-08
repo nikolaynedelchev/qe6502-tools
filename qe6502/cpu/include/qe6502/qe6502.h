@@ -64,7 +64,7 @@ typedef struct qe6502_cpu
     uint8_t  model;
 
     /* Internal execution state. */
-    uint8_t  status;
+    uint8_t  reserved_extension;
     uint16_t microcode;
     uint16_t latch_addr;
     uint8_t  latch_data;

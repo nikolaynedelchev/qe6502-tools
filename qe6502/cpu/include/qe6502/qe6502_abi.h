@@ -101,11 +101,6 @@ typedef uint32_t qe6502abi_tick_t;
 #define QE6502_ABI_FLAG_V  (1u << 6u)
 #define QE6502_ABI_FLAG_N  (1u << 7u)
 
-#define QE6502_ABI_STATUS_WRITING           (1u << 0u)
-#define QE6502_ABI_STATUS_FETCH             (1u << 1u)
-#define QE6502_ABI_STATUS_INTERNAL_RESET    (1u << 6u)
-#define QE6502_ABI_STATUS_CPU_JAMMED        (1u << 7u)
-
 /* Packed tick layout: address bits 0..15, bus bits 16..23, status bits 24..31. */
 #define QE6502_ABI_TICK_ADDRESS_SHIFT 0u
 #define QE6502_ABI_TICK_BUS_SHIFT     16u
@@ -137,13 +132,14 @@ QE6502_ABI_API qe6502abi_tick_t qe6502abi_tick(qe6502abi_context_t *ctx, uint32_
 /* Additional execution control. */
 QE6502_ABI_API qe6502abi_tick_t qe6502abi_goto(qe6502abi_context_t *ctx, uint32_t address);
 
+/* Interrupts assert/deassert. */
 QE6502_ABI_API void qe6502abi_nmi_assert(qe6502abi_context_t *ctx, uint8_t assert_nmi);
 QE6502_ABI_API void qe6502abi_irq_assert(qe6502abi_context_t *ctx, uint8_t assert_irq);
 
+/* Interrupts pins state. */
 QE6502_ABI_API uint8_t qe6502abi_is_nmi_asserted(const qe6502abi_context_t *ctx);
 QE6502_ABI_API uint8_t qe6502abi_is_irq_asserted(const qe6502abi_context_t *ctx);
 
-/* Execution functions return ticks but do not store them in the ABI context. */
 
 /*
  * Save and restore the portable 64-byte ABI context snapshot.

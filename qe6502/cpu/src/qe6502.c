@@ -60,11 +60,6 @@ static inline void next_enter_service_slot(qe6502_t* cpu, service_slot_t slot, u
     cpu->microcode--;
 }
 
-static inline void enter_service_slot_cycle(qe6502_t* cpu, service_slot_t slot, unsigned cycle)
-{
-    cpu->microcode = (uint16_t)SERVICE_SLOT_IDX(cpu->model, slot, cycle);
-}
-
 static inline void loop_here(qe6502_t* cpu)
 {
     cpu->microcode--;
@@ -87,18 +82,22 @@ static inline void set_latch_addr1(qe6502_t* cpu, uint8_t value)
 
 static inline qe6502_tick_t read(const qe6502_t* cpu, uint16_t address)
 {
+    (void)cpu;
+
     return (qe6502_tick_t){
         .address = address,
-        .status = (uint8_t)(cpu->status & (~qe6502_status_writing))
+        .status = (uint8_t)(0)
     };
 }
 
 static inline qe6502_tick_t write(const qe6502_t* cpu, uint16_t address, uint8_t data)
 {
+    (void)cpu;
+
     return (qe6502_tick_t){
         .address = address,
         .bus = data,
-        .status = (uint8_t)(cpu->status | qe6502_status_writing)
+        .status = (uint8_t)(qe6502_status_writing)
     };
 }
 
@@ -548,12 +547,11 @@ static qe6502_tick_t op_kil_jam_r_ffff_pending_data_loop(qe6502_t* cpu, uint8_t 
 {
     (void)bus;
 
-    cpu->status = (uint8_t)(cpu->status | qe6502_status_cpu_jammed);
     loop_here(cpu);
     return (qe6502_tick_t){
         .address = 0xffffu,
         .bus = 0xffu,
-        .status = (uint8_t)((cpu->status & (~qe6502_status_writing)) | qe6502_status_cpu_jammed)
+        .status = (uint8_t)(qe6502_status_cpu_jammed)
     };
 }
 
@@ -2701,7 +2699,7 @@ static inline uint32_t qe6502abi_read_u32(const uint8_t *src)
 static inline void qe6502abi_clear_cpu(qe6502_t *cpu)
 {
     cpu->model = 0u;
-    cpu->status = 0u;
+    cpu->reserved_extension = 0u;
     cpu->microcode = 0u;
     cpu->latch_addr = 0u;
     cpu->latch_data = 0u;
@@ -2718,7 +2716,7 @@ static inline void qe6502abi_clear_cpu(qe6502_t *cpu)
 static inline void qe6502abi_write_cpu(uint8_t *dst, const qe6502_t *cpu)
 {
     dst[0] = cpu->model;
-    dst[1] = cpu->status;
+    dst[1] = cpu->reserved_extension;
     qe6502abi_write_u16(&dst[2], cpu->microcode);
     qe6502abi_write_u16(&dst[4], cpu->latch_addr);
     dst[6] = cpu->latch_data;
@@ -2735,7 +2733,7 @@ static inline void qe6502abi_write_cpu(uint8_t *dst, const qe6502_t *cpu)
 static inline void qe6502abi_read_cpu(qe6502_t *cpu, const uint8_t *src)
 {
     cpu->model = src[0];
-    cpu->status = src[1];
+    cpu->reserved_extension = src[1];
     cpu->microcode = qe6502abi_read_u16(&src[2]);
     cpu->latch_addr = qe6502abi_read_u16(&src[4]);
     cpu->latch_data = src[6];
@@ -2924,7 +2922,7 @@ QE6502_ABI_API void qe6502abi_set_model(qe6502abi_context_t *ctx, uint32_t value
 
 qe6502_tick_t qe6502_goto(qe6502_t *cpu, uint16_t address)
 {
-    cpu->status = 0;
+    cpu->reserved_extension = 0;
     cpu->PC = address;
     enter_service_slot(cpu, service_slot_goto, 0);
     return qe6502_tick(cpu, 0u);
