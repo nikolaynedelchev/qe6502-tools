@@ -368,7 +368,7 @@ Package users should normally keep `QE6502_BUILD_TESTS=OFF` and `QE6502_ENABLE_W
 
 ## Related project: qe6502-benchmark
 
-The separate [`qe6502-benchmark`](https://github.com/nikolaynedelchev/qe6502-benchmark) repository is a companion comparison of 6502-family CPU cores across correctness, cycle timing, host-visible bus behavior, model coverage, performance, portability, and integration trade-offs.
+The separate [`qe6502-benchmark`](https://github.com/nnqe/qe6502-benchmark) repository is a companion comparison of 6502-family CPU cores across correctness, cycle timing, host-visible bus behavior, model coverage, performance, portability, and integration trade-offs.
 
 It is not required in order to use `qe6502`, but it provides useful context for the design choices made here. In the supplied benchmark snapshot, `qe6502` has full SingleStep instruction, cycle-count, and bus-trace correctness across all supported CPU models, while also ranking among the faster cores in the Klaus benchmark results for both NMOS and 65C02 configurations.
 
